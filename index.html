@@ -14,21 +14,20 @@
   <button id="triggerBtn">Run GitHub Workflow</button>
 
   <script>
-    console.log("Welcome to my GitHub Page!");
-
     document.getElementById("triggerBtn").addEventListener("click", async () => {
       try {
-        const response = await fetch("https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches", {
-          method: "POST",
-          headers: {
-            "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer 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", // ⚠️ Don't expose in production!
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            ref: "main"
-          })
-        });
+        const response = await fetch(
+          "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/trigger.yml/dispatches",
+          {
+            method: "POST",
+            headers: {
+              "Accept": "application/vnd.github+json",
+              "Content-Type": "application/json"
+              // ⚠️ No Authorization header if repo is public
+            },
+            body: JSON.stringify({ ref: "main" })
+          }
+        );
 
         if (response.ok) {
           alert("✅ Workflow triggered successfully!");
