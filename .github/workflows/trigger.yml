@@ -10,6 +10,7 @@ jobs:
       - name: Dispatch Node.js CI
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GH_PAT }}   # stored in GitHub Secrets
+          token: ${{ secrets.GH_PAT }}   # 👈 secret stored in repo settings
           repository: marcoshioka/pages-test
           event-type: run-ci
+          client-payload: '{"ref": "main"}'
