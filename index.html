@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>My GitHub Page</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -18,24 +17,20 @@
     const repo  = "pages-test";
 
     document.getElementById("triggerBtn").addEventListener("click", () => {
-      // Marker in the title so the workflow only runs on these issues
       const title = "[TRIGGER] Run Node.js CI";
       const body  = [
-        "This issue was created from the GitHub Pages button.",
+        "This issue was created from the GitHub Pages button to trigger the workflow.",
         "",
         "**Context**:",
         "- Requested at: " + new Date().toISOString(),
         "- From: GitHub Pages"
       ].join("\n");
 
-      // Build the "New Issue" URL with prefilled fields
       const url =
         `https://github.com/${owner}/${repo}/issues/new` +
         `?title=${encodeURIComponent(title)}` +
         `&body=${encodeURIComponent(body)}`;
 
-      // Open the GitHub issue form in a new tab.
-      // The user reviews and clicks "Submit new issue".
       window.open(url, "_blank", "noopener,noreferrer");
     });
   </script>
