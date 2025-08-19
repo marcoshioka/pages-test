@@ -1,17 +1,16 @@
-# .github/workflows/trigger.yml
 name: Trigger CI
 
 on:
-  workflow_dispatch:   # This is what your HTML will call
+  workflow_dispatch:   # API call from HTML lands here
 
 jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Node.js CI via repository_dispatch
+      - name: Fire repository_dispatch
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GH_PAT }}   # 👈 using your Action secret
+          token: ${{ secrets.GH_PAT }}   # your PAT secret
           repository: marcoshioka/pages-test
           event-type: run-ci
-          client-payload: '{"ref": "main", "message": "Triggered from HTML button"}'
+          client-payload: '{"ref": "main"}'
