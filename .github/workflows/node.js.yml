@@ -12,10 +12,14 @@ on:
         required: false
         default: 'Hello from API!'
   issues:
-    types: [opened]   # 👈 New trigger: runs when someone opens a new issue
+    types: [opened]
 
 jobs:
   build:
+    # Only run when the issue title starts with our marker to avoid
+    # running on unrelated issues.
+    if: startsWith(github.event.issue.title, '[TRIGGER]')
+
     runs-on: ubuntu-latest
 
     strategy:
@@ -23,14 +27,14 @@ jobs:
         node-version: [22.x]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npx cypress run
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npx cypress run
