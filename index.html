@@ -30,9 +30,7 @@
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
         });
 

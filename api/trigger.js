@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const { message } = req.body;
 
   const resp = await fetch(
-    "https://api.github.com/repos/marcoshioka/pages-test/dispatches",
+    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
     {
       method: "POST",
       headers: {
@@ -15,8 +15,8 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        event_type: "run-ci",
-        client_payload: { message }
+        ref: "main",               // branch to run workflow on
+        inputs: { message }        // pass input to workflow_dispatch
       })
     }
   );

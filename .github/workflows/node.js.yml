@@ -1,4 +1,3 @@
-# .github/workflows/node.js.yml
 name: Node.js CI
 
 on:
@@ -6,14 +5,14 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
+  # 👇 we keep only workflow_dispatch (no repository_dispatch needed)
   workflow_dispatch:
     inputs:
       message:
         description: 'A custom message'
         required: false
         default: 'Hello from API!'
-  repository_dispatch:
-    types: [run-main]   # 👈 listen for the trigger
 
 jobs:
   build:
@@ -36,5 +35,4 @@ jobs:
 
       - name: Show message (if provided)
         run: |
-          echo "Message: ${{ github.event.inputs.message || '' }}${{ github.event.client_payload.message || '' }}"
-
+          echo "Message: ${{ github.event.inputs.message }}"
