@@ -1,16 +1,18 @@
-name: Trigger CI
+# .github/workflows/trigger.yml
+name: Trigger Bridge
 
 on:
-  workflow_dispatch:   # HTML button will call this workflow
+  repository_dispatch:
+    types: [run-ci]
 
 jobs:
-  trigger:
+  forward:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch Node.js CI
+      - name: Call main workflow
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GHA }}   # 👈 secret stored in repo settings
+          token: ${{ secrets.MY_PAT }}   # 👈 store your PAT in repo secrets
           repository: marcoshioka/pages-test
-          event-type: run-ci
-          client-payload: '{"ref": "main"}'
+          event-type: run-main
+          client-payload: '{"message":"Triggered from GitHub Pages"}'

@@ -26,31 +26,26 @@
   <script>
     const OWNER = "marcoshioka";
     const REPO  = "pages-test";
-    const WORKFLOW_FILE = "node.js.yml"; // .github/workflows/node.js.yml
-
-    // Since you already have your token, just define it directly here:
-    const TOKEN = "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"; 
 
     async function dispatch() {
-      const message = document.getElementById("msg").value || "Triggered from the page";
+      const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
-      const url = `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/dispatches`;
+      const url = `https://api.github.com/repos/${OWNER}/${REPO}/dispatches`;
 
       const r = await fetch(url, {
         method: "POST",
         headers: {
           "Accept": "application/vnd.github+json",
-          "Authorization": `Bearer ${TOKEN}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          ref: "main",
-          inputs: { message }
+          event_type: "run-ci",
+          client_payload: { message }
         })
       });
 
       if (r.ok) {
-        alert("✅ Workflow triggered!");
+        alert("✅ Trigger sent! Check Actions tab.");
       } else {
         const txt = await r.text();
         alert(`❌ ${r.status}: ${txt}`);
