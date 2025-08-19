@@ -24,37 +24,31 @@
   </div>
 
   <script>
-    const OWNER = "marcoshioka";
-    const REPO  = "pages-test";
-
     async function dispatch() {
       const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
-      const url = `https://api.github.com/repos/${OWNER}/${REPO}/dispatches`;
+      try {
+        const r = await fetch("pages-test-sooty.vercel.app/api/trigger", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message })
+        });
 
-      const r = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Accept": "application/vnd.github+json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          event_type: "run-ci",
-          client_payload: { message }
-        })
-      });
+        const data = await r.json();
 
-      if (r.ok) {
-        alert("✅ Trigger sent! Check Actions tab.");
-      } else {
-        const txt = await r.text();
-        alert(`❌ ${r.status}: ${txt}`);
+        if (r.ok) {
+          alert("✅ Workflow triggered! " + (data.success ? "Check Actions tab." : ""));
+        } else {
+          alert(`❌ ${r.status}: ${data.error || "Unknown error"}`);
+        }
+      } catch (err) {
+        alert("⚠️ Request failed: " + err.message);
       }
     }
 
-    document.getElementById("run").addEventListener("click", () => {
-      dispatch().catch(e => alert("⚠️ " + e.message));
-    });
+    document.getElementById("run").addEventListener("click", dispatch);
   </script>
 </body>
 </html>

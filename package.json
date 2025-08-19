@@ -18,5 +18,8 @@
   "homepage": "https://github.com/marcoshioka/pages-test#readme",
   "dependencies": {
     "cypress": "^14.5.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.31.0"
   }
 }
