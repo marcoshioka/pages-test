@@ -28,7 +28,7 @@
       const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
       try {
-        const r = await fetch("pages-test-sooty.vercel.app/api/trigger", {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
