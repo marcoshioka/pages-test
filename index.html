@@ -1,43 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>My GitHub Page</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
+
 <body>
   <h1>Hello World!</h1>
   <p>This is my first GitHub Page 🚀</p>
 
   <button id="triggerBtn">Run GitHub Workflow</button>
 
-  <script>
-    document.getElementById("triggerBtn").addEventListener("click", async () => {
-      try {
-        const response = await fetch(
-          "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/trigger.yml/dispatches",
-          {
-            method: "POST",
-            headers: {
-              "Accept": "application/vnd.github+json",
-              "Content-Type": "application/json",
-              // ⚠️ If your repo is PUBLIC: you can omit Authorization
-              // ⚠️ If PRIVATE: you still need a proxy (not safe to expose PAT here)
-            },
-            body: JSON.stringify({ ref: "main" })
-          }
-        );
-
-        if (response.ok) {
-          alert("✅ Workflow triggered successfully!");
-        } else {
-          const errorText = await response.text();
-          alert("❌ Error: " + response.status + "\n" + errorText);
-        }
-      } catch (err) {
-        alert("⚠️ Request failed: " + err.message);
+<script>
+document.getElementById("triggerBtn").addEventListener("click", async () => {
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/trigger.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json",
+          "Authorization": "Bearer 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" 
+        },
+        body: JSON.stringify({ ref: "main" })
       }
-    });
-  </script>
+    );
+
+    if (response.ok) {
+      alert("✅ Trigger workflow started!");
+    } else {  
+      const errorText = await response.text();
+      alert("❌ Error: " + response.status + "\n" + errorText);
+    }
+  } catch (err) {
+    alert("⚠️ Request failed: " + err.message);
+  }
+});
+</script>
+
 </body>
+
 </html>
