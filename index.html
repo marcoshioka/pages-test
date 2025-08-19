@@ -1,16 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>My GitHub Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
   <h1>Hello World!</h1>
   <p>This is my first GitHub Page 🚀</p>
+
+  <button id="triggerBtn">Run GitHub Workflow</button>
+
+  <script>
+    console.log("Welcome to my GitHub Page!");
+
+    document.getElementById("triggerBtn").addEventListener("click", async () => {
+      try {
+        const response = await fetch("https://api.github.com/repos/marcoshioka/pages-test/issues", {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            title: "Trigger Workflow 🚀",
+            body: "This issue was created by GitHub Pages to trigger the workflow."
+          })
+        });
+
+        if (response.ok) {
+          alert("✅ Issue created! Workflow will start automatically.");
+        } else {
+          const errorText = await response.text();
+          alert("❌ Error: " + response.status + "\n" + errorText);
+        }
+      } catch (err) {
+        alert("⚠️ Request failed: " + err.message);
+      }
+    });
+  </script>
 </body>
 </html>
-<script>
-  console.log("Welcome to my GitHub Page!");
-</script>
-<link rel="stylesheet" href="styles.css">
-<link rel="icon" href="favicon.ico" type="image/x-icon">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">                  
