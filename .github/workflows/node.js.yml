@@ -1,7 +1,7 @@
 name: Node.js CI
 
 on:
-  repository_dispatch:        # listen for repo-dispatch events
+  repository_dispatch:        # listens for custom events
     types: [run-ci]
 
 jobs:
