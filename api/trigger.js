@@ -1,3 +1,5 @@
+import { saveRunMessage } from "../../utils/store";
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -41,16 +43,15 @@ export default async function handler(req, res) {
   const data = await runs.json();
   const run = data.workflow_runs?.[0];
 
-  return res.status(200).json(run ? normalizeRun(run, message) : { error: "No run found" });
-}
+  if (run?.id) {
+    saveRunMessage(run.id, message); // 🔑 save message in memory
+  }
 
-function normalizeRun(run, messageFromTrigger = null) {
-  return {
-    id: run.id,
-    name: run.name,
-    status: run.status,
-    conclusion: run.conclusion,
-    url: run.html_url,
-    message: messageFromTrigger || run.display_title || null
-  };
+  return res.status(200).json({
+    runId: run?.id,
+    url: run?.html_url,
+    status: run?.status,
+    conclusion: run?.conclusion,
+    message
+  });
 }

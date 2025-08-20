@@ -28,12 +28,11 @@
     table { border-collapse: collapse; width: 100%; margin-top: 12px; cursor: pointer; }
     table, th, td { border: 1px solid #ccc; }
     th, td { padding: 6px 10px; text-align: left; }
-    tr.success { background-color: #d4edda; }  /* green */
-    tr.failure { background-color: #f8d7da; }  /* red */
-    tr.running { background-color: #fff3cd; }  /* yellow */
-    tr.other   { background-color: #e2e3e5; }  /* gray */
-    tr:hover { background-color: #dbeafe; }   /* highlight on hover */
-    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; } /* blue glow */
+    tr.success { background-color: #d4edda; }
+    tr.failure { background-color: #f8d7da; }
+    tr.running { background-color: #fff3cd; }
+    tr.other   { background-color: #e2e3e5; }
+    tr:hover { background-color: #dbeafe; }
   </style>
 </head>
 <body>
@@ -59,15 +58,13 @@
       <thead>
         <tr>
           <th>Run ID</th>
-          <th>Message</th>
           <th>Status</th>
           <th>Conclusion</th>
+          <th>Message</th>
           <th>Link</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- History rows go here -->
-      </tbody>
+      <tbody></tbody>
     </table>
   </div>
 
@@ -86,11 +83,11 @@
 
         const data = await r.json();
 
-        if (r.ok && data.id) {
-          currentRunId = data.id;
+        if (r.ok && data.runId) {
+          currentRunId = data.runId;
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>
-             <p><b>Message:</b> ${data.message || "(none)"}</p>`;
+             <p><b>Message:</b> ${data.message}</p>`;
           setTimeout(updateStatus, 3000);
           setTimeout(updateHistoryFromServer, 5000);
         } else {
@@ -115,9 +112,9 @@
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
               <p><span class="spinner"></span><b>${data.name}</b></p>
-              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: pending</p>
+              <p><b>Message:</b> ${data.message}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
             setTimeout(updateStatus, 5000);
@@ -125,12 +122,12 @@
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
               <p>${icon} <b>${data.name}</b></p>
-              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: ${data.conclusion}</p>
+              <p><b>Message:</b> ${data.message}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            currentRunId = null; // stop polling once completed
+            currentRunId = null;
             updateHistoryFromServer();
           }
         } else {
@@ -146,9 +143,7 @@
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
-        if (r.ok) {
-          renderHistory(data.runs);
-        }
+        if (r.ok) renderHistory(data.runs);
       } catch (err) {
         console.error("History update failed:", err.message);
       }
@@ -161,38 +156,33 @@
         if (run.status === "in_progress" || run.status === "queued") cls = "running";
         if (run.conclusion === "success") cls = "success";
         if (run.conclusion === "failure") cls = "failure";
-        if (String(run.id) === String(currentRunId)) cls += " highlight";
 
         return `
           <tr class="${cls}" data-id="${run.id}">
             <td>${run.id}</td>
-            <td>${run.message || "(none)"}</td>
             <td>${run.status}</td>
             <td>${run.conclusion || "pending"}</td>
+            <td>${run.message}</td>
             <td><a href="${run.url}" target="_blank">🔗 View</a></td>
           </tr>
         `;
       }).join("");
 
-      // Add click handlers to rows
       document.querySelectorAll("#history-table tbody tr").forEach(row => {
         row.addEventListener("click", () => {
           currentRunId = row.dataset.id;
           updateStatus();
-          updateHistoryFromServer();
         });
       });
     }
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh history (but status only for active run)
     setInterval(() => {
       if (currentRunId) updateStatus();
       updateHistoryFromServer();
     }, 15000);
 
-    // Initial load
     updateHistoryFromServer();
   </script>
 </body>
