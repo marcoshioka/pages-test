@@ -107,7 +107,6 @@
       if (!currentRunId) return;
 
       try {
-        // ✅ FIXED: add `/run/` before the ID
         const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
         const box = document.getElementById("status-box");
@@ -179,8 +178,7 @@
       document.querySelectorAll("#history-table tbody tr").forEach(row => {
         row.addEventListener("click", () => {
           currentRunId = row.dataset.id;
-          updateStatus();
-          updateHistoryFromServer();
+          updateStatus(); // fetch details for that run
         });
       });
     }

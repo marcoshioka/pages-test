@@ -1,22 +1,14 @@
 export default async function handler(req, res) {
-  // ✅ Always return CORS headers
   res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ✅ Handle preflight request
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { id } = req.query;
 
   try {
-    // Fetch run details from GitHub API
     const ghRes = await fetch(
       `https://api.github.com/repos/marcoshioka/pages-test/actions/runs/${id}`,
       {
@@ -28,13 +20,12 @@ export default async function handler(req, res) {
     );
 
     if (!ghRes.ok) {
-      const errText = await ghRes.text();
-      return res.status(ghRes.status).json({ error: errText });
+      const err = await ghRes.text();
+      return res.status(ghRes.status).json({ error: err });
     }
 
     const run = await ghRes.json();
 
-    // ✅ Return clean JSON to frontend
     return res.status(200).json({
       id: run.id,
       name: run.name,
