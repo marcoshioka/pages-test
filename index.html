@@ -10,6 +10,23 @@
     .row { margin: 10px 0; }
     input[type="text"] { width: 100%; max-width: 420px; padding: 8px; }
     #status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top: 2px solid #24292f;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -44,7 +61,7 @@
 
         if (r.ok) {
           document.getElementById("status-box").innerHTML =
-            `<p>✅ Workflow triggered! Checking status...</p>`;
+            `<p><span class="spinner"></span>Workflow triggered! Waiting for status...</p>`;
           setTimeout(updateStatus, 3000); // wait 3s then check status
         } else {
           document.getElementById("status-box").innerHTML =
@@ -63,12 +80,23 @@
         const box = document.getElementById("status-box");
 
         if (r.ok) {
-          box.innerHTML = `
-            <p><b>${data.name}</b></p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: ${data.conclusion || "pending"}</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
+          if (data.status === "queued" || data.status === "in_progress") {
+            box.innerHTML = `
+              <p><span class="spinner"></span><b>${data.name}</b></p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: pending</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+          } else {
+            // completed
+            const icon = data.conclusion === "success" ? "✅" : "❌";
+            box.innerHTML = `
+              <p>${icon} <b>${data.name}</b></p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: ${data.conclusion}</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+          }
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
         }
