@@ -1,17 +1,26 @@
 // utils/store.js
-// Simple in-memory store for run messages
-// ⚠️ Resets if Vercel restarts — for persistence use KV/DB
+let runs = [];
 
-let runMessages = {}; // { runId: message }
-
-export function saveRunMessage(runId, message) {
-  runMessages[runId] = message;
+/**
+ * Save a new run into memory
+ */
+export function addRun(run) {
+  runs.unshift(run); // add to top of history
+  if (runs.length > 20) {
+    runs = runs.slice(0, 20); // keep last 20
+  }
 }
 
-export function getRunMessage(runId) {
-  return runMessages[runId];
+/**
+ * Update an existing run by ID
+ */
+export function updateRun(updated) {
+  runs = runs.map(r => (String(r.id) === String(updated.id) ? updated : r));
 }
 
-export function getAllMessages() {
-  return runMessages;
+/**
+ * Get all runs stored
+ */
+export function getRuns() {
+  return runs;
 }

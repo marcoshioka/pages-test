@@ -1,59 +1,58 @@
-import { setCors } from "./cors.js";
-import { saveRunMessage } from "./store.js";
+// api/trigger.js
+import fetch from "node-fetch";
+import { addRun } from "../utils/store.js";
 
 export default async function handler(req, res) {
-  setCors(res);
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const { message } = req.body;
 
-    // 1. Trigger workflow
-    const dispatch = await fetch(
-      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
+    const ghRes = await fetch(
+      `https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches`,
       {
         method: "POST",
         headers: {
-          "Accept": "application/vnd.github+json",
-          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ref: "main", inputs: { message } })
+        body: JSON.stringify({
+          ref: "main",
+          inputs: { message },
+        }),
       }
     );
 
-    if (!dispatch.ok) {
-      const err = await dispatch.text();
-      return res.status(dispatch.status).json({ error: err });
+    if (!ghRes.ok) {
+      const errorText = await ghRes.text();
+      return res.status(ghRes.status).json({ error: errorText });
     }
 
-    // 2. Get latest run
-    const runs = await fetch(
-      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github+json"
-        }
-      }
-    );
+    // Fake run entry so frontend can track immediately
+    const fakeRun = {
+      id: Date.now(),
+      message,
+      status: "queued",
+      conclusion: null,
+      url: "https://github.com/marcoshioka/pages-test/actions",
+    };
 
-    const data = await runs.json();
-    const run = data.workflow_runs?.[0];
+    addRun(fakeRun);
 
-    if (run) saveRunMessage(run.id, message);
-
-    return res.status(200).json({
-      success: true,
-      id: run?.id,
-      url: run?.html_url,
-      status: run?.status,
-      conclusion: run?.conclusion,
-      message
-    });
+    res.status(200).json(fakeRun);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 }

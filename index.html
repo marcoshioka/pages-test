@@ -28,12 +28,12 @@
     table { border-collapse: collapse; width: 100%; margin-top: 12px; cursor: pointer; }
     table, th, td { border: 1px solid #ccc; }
     th, td { padding: 6px 10px; text-align: left; }
-    tr.success { background-color: #d4edda; }  /* green */
-    tr.failure { background-color: #f8d7da; }  /* red */
-    tr.running { background-color: #fff3cd; }  /* yellow */
-    tr.other   { background-color: #e2e3e5; }  /* gray */
-    tr:hover { background-color: #dbeafe; }   /* highlight on hover */
-    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; } /* blue glow */
+    tr.success { background-color: #d4edda; }
+    tr.failure { background-color: #f8d7da; }
+    tr.running { background-color: #fff3cd; }
+    tr.other   { background-color: #e2e3e5; }
+    tr:hover { background-color: #dbeafe; }
+    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; }
   </style>
 </head>
 <body>
@@ -72,34 +72,19 @@
   <script>
     let currentRunId = null;
 
-    // ---- Helper with retry ----
-    async function fetchWithRetry(url, options = {}, retries = 3, delay = 1500) {
-      try {
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        return res.json();
-      } catch (err) {
-        if (retries > 0) {
-          console.warn(`Retrying ${url} after error:`, err.message);
-          await new Promise(r => setTimeout(r, delay));
-          return fetchWithRetry(url, options, retries - 1, delay);
-        } else {
-          throw err;
-        }
-      }
-    }
-
     async function dispatch() {
       const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
       try {
-        const data = await fetchWithRetry("https://pages-test-sooty.vercel.app/api/trigger", {
+        const r = await fetch("/api/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
         });
 
-        if (data.id) {
+        const data = await r.json();
+
+        if (r.ok && data.id) {
           currentRunId = data.id;
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>
@@ -108,7 +93,7 @@
           setTimeout(updateHistoryFromServer, 5000);
         } else {
           document.getElementById("status-box").innerHTML =
-            `<p style="color:red;">❌ Failed to trigger workflow</p>`;
+            `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
@@ -120,29 +105,34 @@
       if (!currentRunId) return;
 
       try {
-        const data = await fetchWithRetry(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
-
+        const r = await fetch(`/api/run/${currentRunId}`);
+        const data = await r.json();
         const box = document.getElementById("status-box");
-        if (data.status === "queued" || data.status === "in_progress") {
-          box.innerHTML = `
-            <p><span class="spinner"></span><b>${data.name || "Workflow"}</b></p>
-            <p><b>Message:</b> ${data.message || "(none)"}</p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: pending</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
-          setTimeout(updateStatus, 5000);
+
+        if (r.ok) {
+          if (data.status === "queued" || data.status === "in_progress") {
+            box.innerHTML = `
+              <p><span class="spinner"></span><b>${data.name}</b></p>
+              <p><b>Message:</b> ${data.message || "(none)"}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: pending</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+            setTimeout(updateStatus, 5000);
+          } else {
+            const icon = data.conclusion === "success" ? "✅" : "❌";
+            box.innerHTML = `
+              <p>${icon} <b>${data.name}</b></p>
+              <p><b>Message:</b> ${data.message || "(none)"}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: ${data.conclusion}</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+            currentRunId = null; // stop polling once completed
+            updateHistoryFromServer();
+          }
         } else {
-          const icon = data.conclusion === "success" ? "✅" : "❌";
-          box.innerHTML = `
-            <p>${icon} <b>${data.name || "Workflow"}</b></p>
-            <p><b>Message:</b> ${data.message || "(none)"}</p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: ${data.conclusion}</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
-          currentRunId = null;
-          updateHistoryFromServer();
+          box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
@@ -152,8 +142,11 @@
 
     async function updateHistoryFromServer() {
       try {
-        const data = await fetchWithRetry("https://pages-test-sooty.vercel.app/api/history");
-        renderHistory(data.runs);
+        const r = await fetch("/api/history");
+        const data = await r.json();
+        if (r.ok) {
+          renderHistory(data.runs);
+        }
       } catch (err) {
         console.error("History update failed:", err.message);
       }
