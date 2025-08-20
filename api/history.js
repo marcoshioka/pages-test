@@ -1,26 +1,34 @@
-import { getAllMessages } from "../../utils/store";
+import { setCors } from "./cors.js";
+import { getRunMessage } from "./store.js";
 
 export default async function handler(req, res) {
-  const runsRes = await fetch(
-    "https://api.github.com/repos/marcoshioka/pages-test/actions/runs?per_page=10",
-    {
-      headers: {
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-        "Accept": "application/vnd.github+json"
+  setCors(res);
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+
+  try {
+    const runs = await fetch(
+      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=10",
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github+json"
+        }
       }
-    }
-  );
+    ).then(r => r.json());
 
-  const data = await runsRes.json();
-  const messages = getAllMessages();
+    const formatted = runs.workflow_runs.map(run => ({
+      id: run.id,
+      name: run.name,
+      status: run.status,
+      conclusion: run.conclusion,
+      url: run.html_url,
+      message: getRunMessage(run.id) || "(none)"
+    }));
 
-  const runs = data.workflow_runs?.map(run => ({
-    id: run.id,
-    status: run.status,
-    conclusion: run.conclusion,
-    url: run.html_url,
-    message: messages[run.id] || "(none)"
-  })) || [];
-
-  res.status(200).json({ runs });
+    return res.status(200).json({ runs: formatted });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 }

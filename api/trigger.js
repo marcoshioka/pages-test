@@ -1,57 +1,59 @@
-import { saveRunMessage } from "../../utils/store";
+import { setCors } from "./cors.js";
+import { saveRunMessage } from "./store.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  setCors(res);
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message } = req.body;
+  try {
+    const { message } = req.body;
 
-  // 1. Trigger workflow
-  const dispatch = await fetch(
-    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
-    {
-      method: "POST",
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ ref: "main", inputs: { message } })
-    }
-  );
-
-  if (!dispatch.ok) {
-    const err = await dispatch.text();
-    return res.status(dispatch.status).json({ error: err });
-  }
-
-  // 2. Get latest run
-  const runs = await fetch(
-    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
-    {
-      headers: {
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-        "Accept": "application/vnd.github+json"
+    // 1. Trigger workflow
+    const dispatch = await fetch(
+      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ref: "main", inputs: { message } })
       }
+    );
+
+    if (!dispatch.ok) {
+      const err = await dispatch.text();
+      return res.status(dispatch.status).json({ error: err });
     }
-  );
 
-  const data = await runs.json();
-  const run = data.workflow_runs?.[0];
+    // 2. Get latest run
+    const runs = await fetch(
+      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github+json"
+        }
+      }
+    );
 
-  if (run?.id) {
-    saveRunMessage(run.id, message); // 🔑 save message in memory
+    const data = await runs.json();
+    const run = data.workflow_runs?.[0];
+
+    if (run) saveRunMessage(run.id, message);
+
+    return res.status(200).json({
+      success: true,
+      id: run?.id,
+      url: run?.html_url,
+      status: run?.status,
+      conclusion: run?.conclusion,
+      message
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
-
-  return res.status(200).json({
-    runId: run?.id,
-    url: run?.html_url,
-    status: run?.status,
-    conclusion: run?.conclusion,
-    message
-  });
 }
