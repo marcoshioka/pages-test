@@ -72,16 +72,13 @@
   </div>
 
   <script>
-    // 🔧 Set backend API base URL
-    const API_BASE = "https://pages-test-sooty.vercel.app/api";
-
     let currentRunId = null;
 
     async function dispatch() {
       const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
       try {
-        const r = await fetch(`${API_BASE}/trigger`, {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
@@ -110,14 +107,15 @@
       if (!currentRunId) return;
 
       try {
-        const r = await fetch(`${API_BASE}/${currentRunId}`);
+        // ✅ FIXED: add `/run/` before the ID
+        const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
         const box = document.getElementById("status-box");
 
         if (r.ok) {
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
-              <p><span class="spinner"></span><b>${data.name || "Workflow Run"}</b></p>
+              <p><span class="spinner"></span><b>${data.name}</b></p>
               <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: pending</p>
@@ -127,7 +125,7 @@
           } else {
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
-              <p>${icon} <b>${data.name || "Workflow Run"}</b></p>
+              <p>${icon} <b>${data.name}</b></p>
               <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: ${data.conclusion}</p>
@@ -147,17 +145,8 @@
 
     async function updateHistoryFromServer() {
       try {
-        const r = await fetch(`${API_BASE}/history`);
-        const text = await r.text(); // First ensure it’s not HTML
-        let data;
-
-        try {
-          data = JSON.parse(text);
-        } catch {
-          console.error("History API did not return JSON:", text.slice(0, 200));
-          return;
-        }
-
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+        const data = await r.json();
         if (r.ok) {
           renderHistory(data.runs);
         }
