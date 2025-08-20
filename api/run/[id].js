@@ -1,20 +1,50 @@
-// api/[id].js
-import { getRun } from "../utils/store.js";
-
-export default function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+export default async function handler(req, res) {
+  // ✅ Always return CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+  // ✅ Handle preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { id } = req.query;
 
   try {
-    const { id } = req.query;
-    const run = getRun(id);
-    if (!run) return res.status(404).json({ error: "Run not found" });
+    // Fetch run details from GitHub API
+    const ghRes = await fetch(
+      `https://api.github.com/repos/marcoshioka/pages-test/actions/runs/${id}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github+json"
+        }
+      }
+    );
 
-    res.status(200).json(run);
+    if (!ghRes.ok) {
+      const errText = await ghRes.text();
+      return res.status(ghRes.status).json({ error: errText });
+    }
+
+    const run = await ghRes.json();
+
+    // ✅ Return clean JSON to frontend
+    return res.status(200).json({
+      id: run.id,
+      name: run.name,
+      status: run.status,
+      conclusion: run.conclusion,
+      url: run.html_url,
+      message: run.head_commit?.message || null,
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
