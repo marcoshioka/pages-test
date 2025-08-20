@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   const { message } = req.body;
 
-  // 1. Trigger workflow_dispatch
+  // 1. Trigger workflow
   const dispatch = await fetch(
     "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
     {
@@ -27,36 +27,30 @@ export default async function handler(req, res) {
     return res.status(dispatch.status).json({ error: err });
   }
 
-  // 2. Poll for the new run (avoid race condition)
-  let run = null;
-  for (let i = 0; i < 5; i++) {   // retry up to 5 times
-    const runs = await fetch(
-      "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github+json"
-        }
+  // 2. Get latest run
+  const runs = await fetch(
+    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
+    {
+      headers: {
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json"
       }
-    );
-    const data = await runs.json();
-    run = data.workflow_runs?.[0];
-    if (run) break;
-    await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
-  }
+    }
+  );
 
-  if (!run) {
-    return res.status(202).json({
-      success: true,
-      message: "Workflow dispatched, but no run found yet. Try again shortly."
-    });
-  }
+  const data = await runs.json();
+  const run = data.workflow_runs?.[0];
 
-  return res.status(200).json({
-    success: true,
-    runId: run.id,        // 🔑 camelCase for frontend
-    runUrl: run.html_url,
+  return res.status(200).json(run ? normalizeRun(run, message) : { error: "No run found" });
+}
+
+function normalizeRun(run, messageFromTrigger = null) {
+  return {
+    id: run.id,
+    name: run.name,
     status: run.status,
-    conclusion: run.conclusion
-  });
+    conclusion: run.conclusion,
+    url: run.html_url,
+    message: messageFromTrigger || run.display_title || null
+  };
 }

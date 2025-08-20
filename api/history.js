@@ -4,9 +4,10 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
-  const resp = await fetch(
-    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=5",
+  const runs = await fetch(
+    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=10",
     {
       headers: {
         "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
@@ -15,18 +16,24 @@ export default async function handler(req, res) {
     }
   );
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    return res.status(resp.status).json({ error: err });
+  if (!runs.ok) {
+    const err = await runs.text();
+    return res.status(runs.status).json({ error: err });
   }
 
-  const data = await resp.json();
-  const runs = data.workflow_runs?.map(run => ({
+  const data = await runs.json();
+  return res.status(200).json({
+    runs: data.workflow_runs.map(normalizeRun)
+  });
+}
+
+function normalizeRun(run) {
+  return {
     id: run.id,
+    name: run.name,
     status: run.status,
     conclusion: run.conclusion,
-    url: run.html_url
-  }));
-
-  return res.status(200).json({ runs });
+    url: run.html_url,
+    message: run.display_title || null
+  };
 }

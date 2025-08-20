@@ -33,6 +33,7 @@
     tr.running { background-color: #fff3cd; }  /* yellow */
     tr.other   { background-color: #e2e3e5; }  /* gray */
     tr:hover { background-color: #dbeafe; }   /* highlight on hover */
+    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; } /* blue glow */
   </style>
 </head>
 <body>
@@ -58,6 +59,7 @@
       <thead>
         <tr>
           <th>Run ID</th>
+          <th>Message</th>
           <th>Status</th>
           <th>Conclusion</th>
           <th>Link</th>
@@ -84,10 +86,11 @@
 
         const data = await r.json();
 
-        if (r.ok && data.runId) {
-          currentRunId = data.runId;
+        if (r.ok && data.id) {
+          currentRunId = data.id;
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>`;
+            `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>
+             <p><b>Message:</b> ${data.message || "(none)"}</p>`;
           setTimeout(updateStatus, 3000);
           setTimeout(updateHistoryFromServer, 5000);
         } else {
@@ -112,6 +115,7 @@
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
               <p><span class="spinner"></span><b>${data.name}</b></p>
+              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: pending</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
@@ -121,6 +125,7 @@
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
               <p>${icon} <b>${data.name}</b></p>
+              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
@@ -156,10 +161,12 @@
         if (run.status === "in_progress" || run.status === "queued") cls = "running";
         if (run.conclusion === "success") cls = "success";
         if (run.conclusion === "failure") cls = "failure";
+        if (String(run.id) === String(currentRunId)) cls += " highlight";
 
         return `
           <tr class="${cls}" data-id="${run.id}">
             <td>${run.id}</td>
+            <td>${run.message || "(none)"}</td>
             <td>${run.status}</td>
             <td>${run.conclusion || "pending"}</td>
             <td><a href="${run.url}" target="_blank">🔗 View</a></td>
@@ -172,6 +179,7 @@
         row.addEventListener("click", () => {
           currentRunId = row.dataset.id;
           updateStatus();
+          updateHistoryFromServer();
         });
       });
     }

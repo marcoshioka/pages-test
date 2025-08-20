@@ -4,10 +4,11 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { id } = req.query;
 
-  const resp = await fetch(
+  const runRes = await fetch(
     `https://api.github.com/repos/marcoshioka/pages-test/actions/runs/${id}`,
     {
       headers: {
@@ -17,19 +18,22 @@ export default async function handler(req, res) {
     }
   );
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    return res.status(resp.status).json({ error: err });
+  if (!runRes.ok) {
+    const err = await runRes.text();
+    return res.status(runRes.status).json({ error: err });
   }
 
-  const run = await resp.json();
-  return res.status(200).json({
+  const run = await runRes.json();
+  return res.status(200).json(normalizeRun(run));
+}
+
+function normalizeRun(run) {
+  return {
     id: run.id,
     name: run.name,
     status: run.status,
     conclusion: run.conclusion,
     url: run.html_url,
-    created_at: run.created_at,
-    updated_at: run.updated_at
-  });
+    message: run.display_title || null
+  };
 }
