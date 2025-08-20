@@ -1,26 +1,18 @@
 // utils/store.js
+
 let runs = [];
 
-/**
- * Save a new run into memory
- */
-export function addRun(run) {
-  runs.unshift(run); // add to top of history
-  if (runs.length > 20) {
-    runs = runs.slice(0, 20); // keep last 20
-  }
+export function addRun(id, runData) {
+  // Avoid duplicates, update if exists
+  runs = runs.filter(r => r.id !== id);
+  runs.unshift(runData); // add new at top
+  if (runs.length > 20) runs.pop(); // keep history short
 }
 
-/**
- * Update an existing run by ID
- */
-export function updateRun(updated) {
-  runs = runs.map(r => (String(r.id) === String(updated.id) ? updated : r));
-}
-
-/**
- * Get all runs stored
- */
 export function getRuns() {
   return runs;
+}
+
+export function getRun(id) {
+  return runs.find(r => String(r.id) === String(id));
 }
