@@ -1,17 +1,10 @@
 export default async function handler(req, res) {
-  // Allow any origin (for public demo; you can restrict to your GitHub Pages domain later)
   res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Handle CORS preflight (OPTIONS request)
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { message } = req.body;
 
@@ -21,7 +14,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Accept": "application/vnd.github+json",
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`, // stored in Vercel
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`, // PAT stored in Vercel
         "Content-Type": "application/json"
       },
       body: JSON.stringify({

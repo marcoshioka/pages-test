@@ -9,6 +9,7 @@
     .btn { padding: 10px 16px; border-radius: 8px; background: #24292f; color: #fff; border: 0; cursor: pointer; }
     .row { margin: 10px 0; }
     input[type="text"] { width: 100%; max-width: 420px; padding: 8px; }
+    #status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
   </style>
 </head>
 <body>
@@ -21,6 +22,11 @@
 
   <div class="row">
     <button id="run" class="btn">▶ Run Workflow</button>
+  </div>
+
+  <div class="row">
+    <h2>Latest Workflow Status</h2>
+    <div id="status-box">Click "Run Workflow" to update status...</div>
   </div>
 
   <script>
@@ -37,16 +43,45 @@
         const data = await r.json();
 
         if (r.ok) {
-          alert("✅ Workflow triggered! " + (data.success ? "Check Actions tab." : ""));
+          document.getElementById("status-box").innerHTML =
+            `<p>✅ Workflow triggered! Checking status...</p>`;
+          setTimeout(updateStatus, 3000); // wait 3s then check status
         } else {
-          alert(`❌ ${r.status}: ${data.error || "Unknown error"}`);
+          document.getElementById("status-box").innerHTML =
+            `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
       } catch (err) {
-        alert("⚠️ Request failed: " + err.message);
+        document.getElementById("status-box").innerHTML =
+          `<p style="color:red;">⚠️ ${err.message}</p>`;
+      }
+    }
+
+    async function updateStatus() {
+      try {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/status");
+        const data = await r.json();
+        const box = document.getElementById("status-box");
+
+        if (r.ok) {
+          box.innerHTML = `
+            <p><b>${data.name}</b></p>
+            <p>Status: ${data.status}</p>
+            <p>Conclusion: ${data.conclusion || "pending"}</p>
+            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
+        } else {
+          box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+        }
+      } catch (err) {
+        document.getElementById("status-box").innerHTML =
+          `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
 
     document.getElementById("run").addEventListener("click", dispatch);
+
+    // Auto-refresh status every 15s
+    setInterval(updateStatus, 15000);
   </script>
 </body>
 </html>
