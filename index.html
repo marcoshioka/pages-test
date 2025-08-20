@@ -9,7 +9,7 @@
     .btn { padding: 10px 16px; border-radius: 8px; background: #24292f; color: #fff; border: 0; cursor: pointer; }
     .row { margin: 10px 0; }
     input[type="text"] { width: 100%; max-width: 420px; padding: 8px; }
-    #status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
+    #status-box, #current-status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
     .spinner {
       display: inline-block;
       width: 16px;
@@ -21,19 +21,16 @@
       vertical-align: middle;
       margin-right: 6px;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     table { border-collapse: collapse; width: 100%; margin-top: 12px; cursor: pointer; }
     table, th, td { border: 1px solid #ccc; }
     th, td { padding: 6px 10px; text-align: left; }
-    tr.success { background-color: #d4edda; }  /* green */
-    tr.failure { background-color: #f8d7da; }  /* red */
-    tr.running { background-color: #fff3cd; }  /* yellow */
-    tr.other   { background-color: #e2e3e5; }  /* gray */
-    tr:hover { background-color: #dbeafe; }   /* highlight on hover */
-    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; } /* blue glow */
+    tr.success { background-color: #d4edda; }
+    tr.failure { background-color: #f8d7da; }
+    tr.running { background-color: #fff3cd; }
+    tr.other   { background-color: #e2e3e5; }
+    tr:hover { background-color: #dbeafe; }
+    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; }
   </style>
 </head>
 <body>
@@ -46,6 +43,11 @@
 
   <div class="row">
     <button id="run" class="btn">▶ Run Workflow</button>
+  </div>
+
+  <div class="row">
+    <h2>Current Workflow Status</h2>
+    <div id="current-status-box">No workflow triggered yet.</div>
   </div>
 
   <div class="row">
@@ -65,9 +67,7 @@
           <th>Link</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- History rows go here -->
-      </tbody>
+      <tbody></tbody>
     </table>
   </div>
 
@@ -88,28 +88,28 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          document.getElementById("status-box").innerHTML =
+          document.getElementById("current-status-box").innerHTML =
             `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>
              <p><b>Message:</b> ${data.message || "(none)"}</p>`;
-          setTimeout(updateStatus, 3000);
+          setTimeout(updateCurrentStatus, 3000);
           setTimeout(updateHistoryFromServer, 5000);
         } else {
-          document.getElementById("status-box").innerHTML =
+          document.getElementById("current-status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
       } catch (err) {
-        document.getElementById("status-box").innerHTML =
+        document.getElementById("current-status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
 
-    async function updateStatus() {
+    async function updateCurrentStatus() {
       if (!currentRunId) return;
 
       try {
         const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
-        const box = document.getElementById("status-box");
+        const box = document.getElementById("current-status-box");
 
         if (r.ok) {
           if (data.status === "queued" || data.status === "in_progress") {
@@ -120,7 +120,7 @@
               <p>Conclusion: pending</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            setTimeout(updateStatus, 5000);
+            setTimeout(updateCurrentStatus, 5000);
           } else {
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
@@ -130,9 +130,33 @@
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            currentRunId = null; // stop polling once completed
-            updateHistoryFromServer();
+            currentRunId = null;
           }
+        } else {
+          box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+        }
+      } catch (err) {
+        document.getElementById("current-status-box").innerHTML =
+          `<p style="color:red;">⚠️ ${err.message}</p>`;
+      }
+    }
+
+    async function updateLatestStatus() {
+      try {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/status");
+        const data = await r.json();
+        const box = document.getElementById("status-box");
+
+        if (r.ok && data.id) {
+          const icon = data.conclusion === "success" ? "✅" :
+                       data.conclusion === "failure" ? "❌" : "⏳";
+          box.innerHTML = `
+            <p>${icon} <b>${data.name}</b></p>
+            <p><b>Message:</b> ${data.message || "(none)"}</p>
+            <p>Status: ${data.status}</p>
+            <p>Conclusion: ${data.conclusion || "pending"}</p>
+            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
         }
@@ -146,9 +170,7 @@
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
-        if (r.ok) {
-          renderHistory(data.runs);
-        }
+        if (r.ok) renderHistory(data.runs);
       } catch (err) {
         console.error("History update failed:", err.message);
       }
@@ -174,24 +196,25 @@
         `;
       }).join("");
 
-      // Add click handlers to rows
       document.querySelectorAll("#history-table tbody tr").forEach(row => {
         row.addEventListener("click", () => {
           currentRunId = row.dataset.id;
-          updateStatus(); // fetch details for that run
+          updateCurrentStatus();
         });
       });
     }
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh history (but status only for active run)
+    // Auto-refresh
     setInterval(() => {
-      if (currentRunId) updateStatus();
+      if (currentRunId) updateCurrentStatus();
+      updateLatestStatus();
       updateHistoryFromServer();
     }, 15000);
 
     // Initial load
+    updateLatestStatus();
     updateHistoryFromServer();
   </script>
 </body>
