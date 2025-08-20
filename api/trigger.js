@@ -8,26 +8,44 @@ export default async function handler(req, res) {
 
   const { message } = req.body;
 
-  const resp = await fetch(
+  // 1. Trigger workflow
+  const dispatch = await fetch(
     "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
     {
       method: "POST",
       headers: {
         "Accept": "application/vnd.github+json",
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`, // PAT stored in Vercel
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        ref: "main",
-        inputs: { message }
-      })
+      body: JSON.stringify({ ref: "main", inputs: { message } })
     }
   );
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    return res.status(resp.status).json({ error: err });
+  if (!dispatch.ok) {
+    const err = await dispatch.text();
+    return res.status(dispatch.status).json({ error: err });
   }
 
-  return res.status(200).json({ success: true });
+  // 2. Get latest run (assume it’s the one we just triggered)
+  const runs = await fetch(
+    "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=1",
+    {
+      headers: {
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json"
+      }
+    }
+  );
+
+  const data = await runs.json();
+  const run = data.workflow_runs?.[0];
+
+  return res.status(200).json({
+    success: true,
+    run_id: run?.id,
+    run_url: run?.html_url,
+    status: run?.status,
+    conclusion: run?.conclusion
+  });
 }

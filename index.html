@@ -10,8 +10,6 @@
     .row { margin: 10px 0; }
     input[type="text"] { width: 100%; max-width: 420px; padding: 8px; }
     #status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
-
-    /* Spinner */
     .spinner {
       display: inline-block;
       width: 16px;
@@ -27,6 +25,9 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 6px 10px; text-align: left; }
   </style>
 </head>
 <body>
@@ -46,7 +47,27 @@
     <div id="status-box">Click "Run Workflow" to update status...</div>
   </div>
 
+  <div class="row">
+    <h2>Run History</h2>
+    <table id="history-table">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Status</th>
+          <th>Conclusion</th>
+          <th>Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- History rows go here -->
+      </tbody>
+    </table>
+  </div>
+
   <script>
+    let currentRunId = null;
+    let history = []; // keep recent runs
+
     async function dispatch() {
       const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
 
@@ -60,9 +81,11 @@
         const data = await r.json();
 
         if (r.ok) {
+          currentRunId = data.run_id;
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span>Workflow triggered! Waiting for status...</p>`;
-          setTimeout(updateStatus, 3000); // wait 3s then check status
+            `<p><span class="spinner"></span> Workflow triggered! Run #${currentRunId}</p>`;
+          addToHistory(data.run_id, data.status, data.conclusion, data.run_url);
+          setTimeout(updateStatus, 3000);
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -74,8 +97,10 @@
     }
 
     async function updateStatus() {
+      if (!currentRunId) return;
+
       try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/status");
+        const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
         const box = document.getElementById("status-box");
 
@@ -88,7 +113,6 @@
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
           } else {
-            // completed
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
               <p>${icon} <b>${data.name}</b></p>
@@ -96,6 +120,8 @@
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
+            updateHistory(currentRunId, data.status, data.conclusion, data.url);
+            currentRunId = null; // stop tracking
           }
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
@@ -104,6 +130,35 @@
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
+    }
+
+    // --- History management ---
+    function addToHistory(id, status, conclusion, url) {
+      history.unshift({ id, status, conclusion, url });
+      if (history.length > 5) history.pop(); // keep only last 5
+      renderHistory();
+    }
+
+    function updateHistory(id, status, conclusion, url) {
+      const run = history.find(r => r.id === id);
+      if (run) {
+        run.status = status;
+        run.conclusion = conclusion;
+        run.url = url;
+      }
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const tbody = document.querySelector("#history-table tbody");
+      tbody.innerHTML = history.map(run => `
+        <tr>
+          <td>${run.id}</td>
+          <td>${run.status}</td>
+          <td>${run.conclusion || "pending"}</td>
+          <td><a href="${run.url}" target="_blank">🔗 View</a></td>
+        </tr>
+      `).join("");
     }
 
     document.getElementById("run").addEventListener("click", dispatch);
