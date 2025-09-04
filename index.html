@@ -237,31 +237,35 @@
       if (!currentRunId) return;
 
       try {
-        const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
+        // ✅ Use history API and filter by run ID to avoid showing other runs
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
-        const box = document.getElementById("status-box");
 
-        // ✅ Only update if API returned our run
-        if (r.ok && String(data.id) === String(currentRunId)) {
-          if (data.status === "queued" || data.status === "in_progress") {
-            box.innerHTML = `
-              <p><span class="spinner"></span><b>${data.name}</b></p>
-              <p>Run ID: ${currentRunId}</p>
-              <p>Status: ${data.status}</p>
-              <p>Conclusion: pending</p>
-              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-            `;
-            setTimeout(updateCurrentStatus, 5000);
-          } else {
-            const icon = data.conclusion === "success" ? "✅" : "❌";
-            box.innerHTML = `
-              <p>${icon} <b>${data.name}</b></p>
-              <p>Run ID: ${currentRunId}</p>
-              <p>Status: ${data.status}</p>
-              <p>Conclusion: ${data.conclusion}</p>
-              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-            `;
-            currentRunId = null; // stop polling
+        if (r.ok && Array.isArray(data.runs)) {
+          const run = data.runs.find(r => String(r.id) === String(currentRunId));
+          const box = document.getElementById("status-box");
+
+          if (run) {
+            if (run.status === "queued" || run.status === "in_progress") {
+              box.innerHTML = `
+                <p><span class="spinner"></span><b>${run.name}</b></p>
+                <p>Run ID: ${run.id}</p>
+                <p>Status: ${run.status}</p>
+                <p>Conclusion: pending</p>
+                <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+              `;
+              setTimeout(updateCurrentStatus, 5000);
+            } else {
+              const icon = run.conclusion === "success" ? "✅" : "❌";
+              box.innerHTML = `
+                <p>${icon} <b>${run.name}</b></p>
+                <p>Run ID: ${run.id}</p>
+                <p>Status: ${run.status}</p>
+                <p>Conclusion: ${run.conclusion}</p>
+                <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+              `;
+              currentRunId = null; // stop polling once done
+            }
           }
         }
       } catch (err) {
