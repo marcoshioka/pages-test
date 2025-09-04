@@ -104,6 +104,7 @@
 
   <script>
     let currentRunId = null;
+    let trackedRun = null; // ✅ keep last known data for currentRunId
     let chartInstance = null;
 
     async function dispatch() {
@@ -118,9 +119,10 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
+          trackedRun = null; // reset
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus(); // start polling only this run
+          updateCurrentStatus();
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -139,39 +141,52 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
-        // 🚨 Strict lock: ignore if API doesn't return the right run
+        // 🚨 Ignore wrong runs
         if (!r.ok || !data || String(data.id) !== String(currentRunId)) {
-          box.innerHTML =
-            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to be recognized...</p>`;
+          if (trackedRun) {
+            renderStatus(trackedRun, box); // show last known state
+          } else {
+            box.innerHTML = `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b>…</p>`;
+          }
           setTimeout(updateCurrentStatus, 5000);
           return;
         }
 
-        // ✅ Render only the correct run
+        // ✅ Save correct run
+        trackedRun = data;
+        renderStatus(data, box);
+
         if (data.status === "queued" || data.status === "in_progress") {
-          box.innerHTML = `
-            <p><span class="spinner"></span><b>${data.name}</b></p>
-            <p>Run ID: ${data.id}</p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: pending</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
           setTimeout(updateCurrentStatus, 5000);
         } else {
-          const icon = data.conclusion === "success" ? "✅" : "❌";
-          box.innerHTML = `
-            <p>${icon} <b>${data.name}</b></p>
-            <p>Run ID: ${data.id}</p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: ${data.conclusion}</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
-          currentRunId = null; // stop polling after completion
+          currentRunId = null;
+          trackedRun = null;
         }
 
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
+      }
+    }
+
+    function renderStatus(run, box) {
+      if (run.status === "queued" || run.status === "in_progress") {
+        box.innerHTML = `
+          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: pending</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+      } else {
+        const icon = run.conclusion === "success" ? "✅" : "❌";
+        box.innerHTML = `
+          <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: ${run.conclusion}</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
       }
     }
 
@@ -256,9 +271,9 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Poll history independently (table + chart always refresh)
+    // Poll history independently
     setInterval(updateHistoryFromServer, 15000);
-    updateHistoryFromServer(); // initial load
+    updateHistoryFromServer();
   </script>
 </body>
 </html>
