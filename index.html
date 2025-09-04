@@ -138,6 +138,18 @@
     tr.other   { background-color: #f9fafb; }
     tr:hover { background-color: #dbeafe; cursor: pointer; }
     tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
+
+    /* Graph styling */
+    .chart-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .chart-container canvas {
+      width: 180px !important;  /* shrink to ~25% */
+      height: 180px !important;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -156,7 +168,6 @@
 
     <div class="card">
       <h2>Run History</h2>
-      <canvas id="statusChart" width="400" height="200"></canvas>
       <table id="history-table">
         <thead>
           <tr>
@@ -168,6 +179,9 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div class="chart-container">
+        <canvas id="statusChart"></canvas>
+      </div>
     </div>
 
   </div>
@@ -291,6 +305,10 @@
             data: [counts.success, counts.failure, counts.running, counts.other],
             backgroundColor: ["#22c55e", "#ef4444", "#f59e0b", "#6b7280"]
           }]
+        },
+        options: {
+          plugins: { legend: { position: "bottom" } },
+          maintainAspectRatio: false
         }
       });
     }
