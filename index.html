@@ -139,10 +139,10 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
-        // ✅ Strict lock: ignore if API doesn't return the right run
+        // 🚨 Strict lock: ignore if API doesn't return the right run
         if (!r.ok || !data || String(data.id) !== String(currentRunId)) {
           box.innerHTML =
-            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to appear...</p>`;
+            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to be recognized...</p>`;
           setTimeout(updateCurrentStatus, 5000);
           return;
         }
