@@ -112,13 +112,8 @@
     }
 
     @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     table {
@@ -131,8 +126,7 @@
       background: var(--card-bg);
     }
 
-    th,
-    td {
+    th, td {
       padding: 10px 12px;
       text-align: left;
       font-size: 0.9rem;
@@ -151,31 +145,12 @@
       }
     }
 
-    tr.success {
-      background-color: #ecfdf5;
-    }
-
-    tr.failure {
-      background-color: #fef2f2;
-    }
-
-    tr.running {
-      background-color: #fffbeb;
-    }
-
-    tr.other {
-      background-color: #f9fafb;
-    }
-
-    tr:hover {
-      background-color: #dbeafe;
-      cursor: pointer;
-    }
-
-    tr.highlight {
-      outline: 2px solid var(--primary);
-      box-shadow: 0 0 6px var(--primary);
-    }
+    tr.success { background-color: #ecfdf5; }
+    tr.failure { background-color: #fef2f2; }
+    tr.running { background-color: #fffbeb; }
+    tr.other   { background-color: #f9fafb; }
+    tr:hover { background-color: #dbeafe; cursor: pointer; }
+    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
 
     /* Chart */
     .chart-wrapper {
@@ -246,6 +221,7 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
+          sessionStorage.setItem("currentRunId", currentRunId); // ✅ scoped per tab
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
           updateCurrentStatus(); // begin polling
@@ -264,7 +240,6 @@
       if (!currentRunId) return;
 
       try {
-        // First try to fetch directly by run ID
         const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
         const box = document.getElementById("status-box");
@@ -273,38 +248,24 @@
           const runName = data.name || "GitHub Workflow";
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
-          <p><span class="spinner"></span><b>${runName}</b></p>
-          <p>Run ID: ${data.id}</p>
-          <p>Status: ${data.status}</p>
-          <p>Conclusion: pending</p>
-          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
+              <p><span class="spinner"></span><b>${runName}</b></p>
+              <p>Run ID: ${data.id}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: pending</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
             setTimeout(updateCurrentStatus, 5000);
           } else {
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
-          <p>${icon} <b>${runName}</b></p>
-          <p>Run ID: ${data.id}</p>
-          <p>Status: ${data.status}</p>
-          <p>Conclusion: ${data.conclusion}</p>
-          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
-            currentRunId = null; // stop polling
-          }
-        } else {
-          // fallback: maybe history hasn’t updated yet
-          const history = await fetch("https://pages-test-sooty.vercel.app/api/history");
-          const historyData = await history.json();
-          const run = historyData.runs.find(r => String(r.id) === String(currentRunId));
-          if (run) {
-            box.innerHTML = `
-          <p><span class="spinner"></span><b>GitHub Workflow</b></p>
-          <p>Run ID: ${run.id}</p>
-          <p>Status: ${run.status}</p>
-          <p>Conclusion: ${run.conclusion || "pending"}</p>
-          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
-            setTimeout(updateCurrentStatus, 5000);
+              <p>${icon} <b>${runName}</b></p>
+              <p>Run ID: ${data.id}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: ${data.conclusion}</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+            sessionStorage.removeItem("currentRunId"); // clear after finish
+            currentRunId = null;
           }
         }
       } catch (err) {
@@ -312,7 +273,6 @@
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
-
 
     async function updateHistoryFromServer() {
       try {
@@ -404,8 +364,14 @@
       updateHistoryFromServer();
     }, 15000);
 
+    // ✅ Restore run ID for this tab
+    const savedId = sessionStorage.getItem("currentRunId");
+    if (savedId) {
+      currentRunId = savedId;
+      updateCurrentStatus();
+    }
+
     updateHistoryFromServer();
   </script>
 </body>
-
 </html>
