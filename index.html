@@ -221,7 +221,7 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          sessionStorage.setItem("currentRunId", currentRunId); // ✅ scoped per tab
+          sessionStorage.setItem("currentRunId", currentRunId); // per tab
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
           updateCurrentStatus(); // begin polling
@@ -267,6 +267,12 @@
             sessionStorage.removeItem("currentRunId"); // clear after finish
             currentRunId = null;
           }
+        } else {
+          // ⏳ Don’t fallback to history — just wait
+          box.innerHTML = `
+            <p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to appear...</p>
+          `;
+          setTimeout(updateCurrentStatus, 5000);
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
@@ -364,7 +370,7 @@
       updateHistoryFromServer();
     }, 15000);
 
-    // ✅ Restore run ID for this tab
+    // Restore run ID for this tab
     const savedId = sessionStorage.getItem("currentRunId");
     if (savedId) {
       currentRunId = savedId;
