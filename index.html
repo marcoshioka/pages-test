@@ -218,9 +218,10 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
+          // update status box immediately with triggered run
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>`;
-          // start polling immediately
+            `<p><span class="spinner"></span> Workflow triggered! Tracking run <b>#${currentRunId}</b></p>`;
+          // start polling only this run
           updateCurrentStatus();
           setTimeout(updateHistoryFromServer, 2000);
         } else {
@@ -245,6 +246,7 @@
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
               <p><span class="spinner"></span><b>${data.name}</b></p>
+              <p>Run ID: ${currentRunId}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: pending</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
@@ -254,11 +256,12 @@
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
               <p>${icon} <b>${data.name}</b></p>
+              <p>Run ID: ${currentRunId}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            currentRunId = null;
+            currentRunId = null; // stop tracking
           }
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
@@ -332,7 +335,7 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh
+    // Auto-refresh only history
     setInterval(() => {
       if (currentRunId) updateCurrentStatus();
       updateHistoryFromServer();
