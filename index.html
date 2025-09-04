@@ -72,7 +72,6 @@
       border: 0;
       cursor: pointer;
       font-weight: 500;
-      transition: background 0.2s ease;
     }
 
     .btn:hover {
@@ -214,18 +213,16 @@
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: "Triggered from GitHub Pages" })
+          body: JSON.stringify({ message: "Triggered from page" })
         });
 
         const data = await r.json();
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          sessionStorage.setItem("currentRunId", currentRunId); // scoped per tab
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus();
-          setTimeout(updateHistoryFromServer, 2000);
+          updateCurrentStatus(); // ✅ only this run
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -244,44 +241,36 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
-        // Strict: only show if it matches the triggered ID
-        if (r.ok && data && String(data.id) === String(currentRunId)) {
-          renderStatusBox(data, box);
+        if (r.ok && String(data.id) === String(currentRunId)) {
           if (data.status === "queued" || data.status === "in_progress") {
+            box.innerHTML = `
+              <p><span class="spinner"></span><b>${data.name}</b></p>
+              <p>Run ID: ${data.id}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: pending</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
             setTimeout(updateCurrentStatus, 5000);
+          } else {
+            const icon = data.conclusion === "success" ? "✅" : "❌";
+            box.innerHTML = `
+              <p>${icon} <b>${data.name}</b></p>
+              <p>Run ID: ${data.id}</p>
+              <p>Status: ${data.status}</p>
+              <p>Conclusion: ${data.conclusion}</p>
+              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+            `;
+            // ✅ Only after completion → refresh history
+            updateHistoryFromServer();
           }
         } else {
-          // Don't switch to another run → just wait
-          box.innerHTML = `
-            <p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to appear...</p>
-          `;
+          box.innerHTML =
+            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b>...</p>`;
           setTimeout(updateCurrentStatus, 5000);
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
-      }
-    }
-
-    function renderStatusBox(run, box) {
-      const runName = run.name || "GitHub Workflow";
-      if (run.status === "queued" || run.status === "in_progress") {
-        box.innerHTML = `
-          <p><span class="spinner"></span><b>${runName}</b></p>
-          <p>Run ID: ${run.id}</p>
-          <p>Status: ${run.status}</p>
-          <p>Conclusion: pending</p>
-          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
-      } else {
-        const icon = run.conclusion === "success" ? "✅" : "❌";
-        box.innerHTML = `
-          <p>${icon} <b>${runName}</b></p>
-          <p>Run ID: ${run.id}</p>
-          <p>Status: ${run.status}</p>
-          <p>Conclusion: ${run.conclusion}</p>
-          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
       }
     }
 
@@ -329,7 +318,6 @@
       });
 
       const total = counts.success + counts.failure + counts.running + counts.other;
-
       const ctx = document.getElementById("statusChart").getContext("2d");
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, {
@@ -355,13 +343,12 @@
             },
             datalabels: {
               color: "#fff",
-              formatter: (value, ctx) => {
+              formatter: (value) => {
                 const percent = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
                 return value > 0 ? `${percent}%` : "";
               }
             }
-          },
-          maintainAspectRatio: true
+          }
         },
         plugins: [ChartDataLabels]
       });
@@ -369,19 +356,8 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh
-    setInterval(() => {
-      if (currentRunId) updateCurrentStatus();
-      updateHistoryFromServer();
-    }, 15000);
-
-    // Restore run ID for this tab
-    const savedId = sessionStorage.getItem("currentRunId");
-    if (savedId) {
-      currentRunId = savedId;
-      updateCurrentStatus();
-    }
-
+    // Note: auto-refresh disabled for status box → only runs when triggered
+    // History updates only after run completion
     updateHistoryFromServer();
   </script>
 </body>
