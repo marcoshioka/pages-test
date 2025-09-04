@@ -237,7 +237,6 @@
       if (!currentRunId) return;
 
       try {
-        // ✅ Use history API and filter by run ID to avoid showing other runs
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
 
@@ -246,9 +245,10 @@
           const box = document.getElementById("status-box");
 
           if (run) {
+            const runName = run.name || "GitHub Workflow"; // ✅ fallback name
             if (run.status === "queued" || run.status === "in_progress") {
               box.innerHTML = `
-                <p><span class="spinner"></span><b>${run.name}</b></p>
+                <p><span class="spinner"></span><b>${runName}</b></p>
                 <p>Run ID: ${run.id}</p>
                 <p>Status: ${run.status}</p>
                 <p>Conclusion: pending</p>
@@ -258,7 +258,7 @@
             } else {
               const icon = run.conclusion === "success" ? "✅" : "❌";
               box.innerHTML = `
-                <p>${icon} <b>${run.name}</b></p>
+                <p>${icon} <b>${runName}</b></p>
                 <p>Run ID: ${run.id}</p>
                 <p>Status: ${run.status}</p>
                 <p>Conclusion: ${run.conclusion}</p>
@@ -266,6 +266,9 @@
               `;
               currentRunId = null; // stop polling once done
             }
+          } else {
+            box.innerHTML = `<p style="color:red;">⚠️ Run #${currentRunId} not found in history yet</p>`;
+            setTimeout(updateCurrentStatus, 5000);
           }
         }
       } catch (err) {
