@@ -5,70 +5,185 @@
   <title>Run CI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; }
-    .btn { padding: 10px 16px; border-radius: 8px; background: #24292f; color: #fff; border: 0; cursor: pointer; }
-    .row { margin: 10px 0; }
-    input[type="text"] { width: 100%; max-width: 420px; padding: 8px; }
-    #status-box, #current-status-box { padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
+    :root {
+      --bg: #f9fafb;
+      --card-bg: #fff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #22c55e;
+      --failure: #ef4444;
+      --warning: #f59e0b;
+      --muted: #6b7280;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 32px;
+      color: #111827;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      color: var(--primary-dark);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .row {
+      margin: 14px 0;
+    }
+
+    label {
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: inline-block;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+    }
+
+    #status-box, #current-status-box {
+      border-radius: var(--radius);
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 14px;
+      font-size: 0.95rem;
+    }
+
     .spinner {
       display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #ccc;
-      border-top: 2px solid #24292f;
+      width: 18px;
+      height: 18px;
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
       vertical-align: middle;
-      margin-right: 6px;
+      margin-right: 8px;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    table { border-collapse: collapse; width: 100%; margin-top: 12px; cursor: pointer; }
-    table, th, td { border: 1px solid #ccc; }
-    th, td { padding: 6px 10px; text-align: left; }
-    tr.success { background-color: #d4edda; }
-    tr.failure { background-color: #f8d7da; }
-    tr.running { background-color: #fff3cd; }
-    tr.other   { background-color: #e2e3e5; }
-    tr:hover { background-color: #dbeafe; }
-    tr.highlight { outline: 2px solid #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: #fff;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    tr {
+      transition: background 0.2s;
+    }
+
+    tr.success { background-color: #ecfdf5; }
+    tr.failure { background-color: #fef2f2; }
+    tr.running { background-color: #fffbeb; }
+    tr.other   { background-color: #f9fafb; }
+    tr:hover { background-color: #dbeafe; cursor: pointer; }
+    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
   </style>
 </head>
 <body>
-  <h1>Run GitHub Workflow</h1>
+  <h1>🚀 Run GitHub Workflow</h1>
+  <div class="container">
 
-  <div class="row">
-    <label>Optional message to pass to the workflow:</label><br />
-    <input id="msg" type="text" placeholder="Hello from the page!" />
-  </div>
+    <div class="card">
+      <div class="row">
+        <label for="msg">Optional message to pass to the workflow:</label>
+        <input id="msg" type="text" placeholder="Hello from the page!" />
+      </div>
+      <div class="row">
+        <button id="run" class="btn">▶ Run Workflow</button>
+      </div>
+    </div>
 
-  <div class="row">
-    <button id="run" class="btn">▶ Run Workflow</button>
-  </div>
+    <div class="card">
+      <h2>Current Workflow Status</h2>
+      <div id="current-status-box">No workflow triggered yet.</div>
+    </div>
 
-  <div class="row">
-    <h2>Current Workflow Status</h2>
-    <div id="current-status-box">No workflow triggered yet.</div>
-  </div>
+    <div class="card">
+      <h2>Latest Workflow Status</h2>
+      <div id="status-box">Click "Run Workflow" to update status...</div>
+    </div>
 
-  <div class="row">
-    <h2>Latest Workflow Status</h2>
-    <div id="status-box">Click "Run Workflow" to update status...</div>
-  </div>
+    <div class="card">
+      <h2>Run History</h2>
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom:8px;">Click a row to view details</p>
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>Run ID</th>
+            <th>Message</th>
+            <th>Status</th>
+            <th>Conclusion</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <div class="row">
-    <h2>Run History (click row to view details)</h2>
-    <table id="history-table">
-      <thead>
-        <tr>
-          <th>Run ID</th>
-          <th>Message</th>
-          <th>Status</th>
-          <th>Conclusion</th>
-          <th>Link</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
   </div>
 
   <script>
