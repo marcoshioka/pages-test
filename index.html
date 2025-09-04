@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Run CI</title>
@@ -16,7 +17,7 @@
       --warning: #f59e0b;
       --muted: #6b7280;
       --radius: 12px;
-      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     @media (prefers-color-scheme: dark) {
@@ -110,9 +111,14 @@
       margin-right: 8px;
     }
 
-    @keyframes spin { 
-      0% { transform: rotate(0deg); } 
-      100% { transform: rotate(360deg); } 
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
 
     table {
@@ -125,7 +131,8 @@
       background: var(--card-bg);
     }
 
-    th, td {
+    th,
+    td {
       padding: 10px 12px;
       text-align: left;
       font-size: 0.9rem;
@@ -144,12 +151,31 @@
       }
     }
 
-    tr.success { background-color: #ecfdf5; }
-    tr.failure { background-color: #fef2f2; }
-    tr.running { background-color: #fffbeb; }
-    tr.other   { background-color: #f9fafb; }
-    tr:hover { background-color: #dbeafe; cursor: pointer; }
-    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
+    tr.success {
+      background-color: #ecfdf5;
+    }
+
+    tr.failure {
+      background-color: #fef2f2;
+    }
+
+    tr.running {
+      background-color: #fffbeb;
+    }
+
+    tr.other {
+      background-color: #f9fafb;
+    }
+
+    tr:hover {
+      background-color: #dbeafe;
+      cursor: pointer;
+    }
+
+    tr.highlight {
+      outline: 2px solid var(--primary);
+      box-shadow: 0 0 6px var(--primary);
+    }
 
     /* Chart */
     .chart-wrapper {
@@ -168,6 +194,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
+
 <body>
   <h1>🚀 Run GitHub Workflow</h1>
   <div class="container">
@@ -237,37 +264,46 @@
       if (!currentRunId) return;
 
       try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+        // First try to fetch directly by run ID
+        const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
+        const box = document.getElementById("status-box");
 
-        if (r.ok && Array.isArray(data.runs)) {
-          const run = data.runs.find(r => String(r.id) === String(currentRunId));
-          const box = document.getElementById("status-box");
-
-          if (run) {
-            const runName = run.name || "GitHub Workflow"; // ✅ fallback name
-            if (run.status === "queued" || run.status === "in_progress") {
-              box.innerHTML = `
-                <p><span class="spinner"></span><b>${runName}</b></p>
-                <p>Run ID: ${run.id}</p>
-                <p>Status: ${run.status}</p>
-                <p>Conclusion: pending</p>
-                <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-              `;
-              setTimeout(updateCurrentStatus, 5000);
-            } else {
-              const icon = run.conclusion === "success" ? "✅" : "❌";
-              box.innerHTML = `
-                <p>${icon} <b>${runName}</b></p>
-                <p>Run ID: ${run.id}</p>
-                <p>Status: ${run.status}</p>
-                <p>Conclusion: ${run.conclusion}</p>
-                <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-              `;
-              currentRunId = null; // stop polling once done
-            }
+        if (r.ok && data && String(data.id) === String(currentRunId)) {
+          const runName = data.name || "GitHub Workflow";
+          if (data.status === "queued" || data.status === "in_progress") {
+            box.innerHTML = `
+          <p><span class="spinner"></span><b>${runName}</b></p>
+          <p>Run ID: ${data.id}</p>
+          <p>Status: ${data.status}</p>
+          <p>Conclusion: pending</p>
+          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+            setTimeout(updateCurrentStatus, 5000);
           } else {
-            box.innerHTML = `<p style="color:red;">⚠️ Run #${currentRunId} not found in history yet</p>`;
+            const icon = data.conclusion === "success" ? "✅" : "❌";
+            box.innerHTML = `
+          <p>${icon} <b>${runName}</b></p>
+          <p>Run ID: ${data.id}</p>
+          <p>Status: ${data.status}</p>
+          <p>Conclusion: ${data.conclusion}</p>
+          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+            currentRunId = null; // stop polling
+          }
+        } else {
+          // fallback: maybe history hasn’t updated yet
+          const history = await fetch("https://pages-test-sooty.vercel.app/api/history");
+          const historyData = await history.json();
+          const run = historyData.runs.find(r => String(r.id) === String(currentRunId));
+          if (run) {
+            box.innerHTML = `
+          <p><span class="spinner"></span><b>GitHub Workflow</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: ${run.conclusion || "pending"}</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
             setTimeout(updateCurrentStatus, 5000);
           }
         }
@@ -276,6 +312,7 @@
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
+
 
     async function updateHistoryFromServer() {
       try {
@@ -338,7 +375,7 @@
             legend: { position: "bottom" },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   const value = context.raw;
                   const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                   return `${context.label}: ${value} (${percent}%)`;
@@ -370,4 +407,5 @@
     updateHistoryFromServer();
   </script>
 </body>
+
 </html>
