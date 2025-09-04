@@ -144,11 +144,14 @@
       display: flex;
       justify-content: center;
       margin-top: 20px;
+      max-width: 220px; /* shrink graph size */
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .chart-container canvas {
-      width: 360px !important;  /* shrink to ~25% */
-      height: 360px !important;
+      width: 100% !important;
+      height: auto !important; /* keep proportions */
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -308,7 +311,7 @@
         },
         options: {
           plugins: { legend: { position: "bottom" } },
-          maintainAspectRatio: false
+          maintainAspectRatio: true
         }
       });
     }
