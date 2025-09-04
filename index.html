@@ -8,6 +8,7 @@
     :root {
       --bg: #f9fafb;
       --card-bg: #fff;
+      --text: #111827;
       --primary: #2563eb;
       --primary-dark: #1d4ed8;
       --success: #22c55e;
@@ -18,19 +19,30 @@
       --shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111827;
+        --card-bg: #1f2937;
+        --text: #f9fafb;
+        --primary: #3b82f6;
+        --primary-dark: #2563eb;
+        --muted: #9ca3af;
+      }
+    }
+
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       background: var(--bg);
       margin: 0;
       padding: 32px;
-      color: #111827;
+      color: var(--text);
     }
 
     h1 {
       text-align: center;
       font-size: 1.8rem;
       margin-bottom: 24px;
-      color: var(--primary-dark);
+      color: var(--primary);
     }
 
     .container {
@@ -45,24 +57,6 @@
       border-radius: var(--radius);
       padding: 20px;
       box-shadow: var(--shadow);
-    }
-
-    .row {
-      margin: 14px 0;
-    }
-
-    label {
-      font-weight: 500;
-      margin-bottom: 6px;
-      display: inline-block;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: var(--radius);
-      font-size: 0.95rem;
     }
 
     .btn {
@@ -84,10 +78,10 @@
       background: var(--primary-dark);
     }
 
-    #status-box, #current-status-box {
+    #status-box {
       border-radius: var(--radius);
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
+      border: 1px solid #37415133;
+      background: var(--bg);
       padding: 14px;
       font-size: 0.95rem;
     }
@@ -116,7 +110,7 @@
       border-radius: var(--radius);
       overflow: hidden;
       box-shadow: var(--shadow);
-      background: #fff;
+      background: var(--card-bg);
     }
 
     th, td {
@@ -131,8 +125,11 @@
       color: #374151;
     }
 
-    tr {
-      transition: background 0.2s;
+    @media (prefers-color-scheme: dark) {
+      th {
+        background: #374151;
+        color: #f9fafb;
+      }
     }
 
     tr.success { background-color: #ecfdf5; }
@@ -142,39 +139,28 @@
     tr:hover { background-color: #dbeafe; cursor: pointer; }
     tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h1>🚀 Run GitHub Workflow</h1>
   <div class="container">
 
     <div class="card">
-      <div class="row">
-        <label for="msg">Optional message to pass to the workflow:</label>
-        <input id="msg" type="text" placeholder="Hello from the page!" />
-      </div>
-      <div class="row">
-        <button id="run" class="btn">▶ Run Workflow</button>
-      </div>
+      <button id="run" class="btn">▶ Run Workflow</button>
     </div>
 
     <div class="card">
-      <h2>Current Workflow Status</h2>
-      <div id="current-status-box">No workflow triggered yet.</div>
-    </div>
-
-    <div class="card">
-      <h2>Latest Workflow Status</h2>
-      <div id="status-box">Click "Run Workflow" to update status...</div>
+      <h2>Workflow Status</h2>
+      <div id="status-box">No workflow triggered yet.</div>
     </div>
 
     <div class="card">
       <h2>Run History</h2>
-      <p style="font-size:0.9rem; color:var(--muted); margin-bottom:8px;">Click a row to view details</p>
+      <canvas id="statusChart" width="400" height="200"></canvas>
       <table id="history-table">
         <thead>
           <tr>
             <th>Run ID</th>
-            <th>Message</th>
             <th>Status</th>
             <th>Conclusion</th>
             <th>Link</th>
@@ -188,32 +174,30 @@
 
   <script>
     let currentRunId = null;
+    let chartInstance = null;
 
     async function dispatch() {
-      const message = document.getElementById("msg").value || "Triggered from GitHub Pages";
-
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message })
+          body: JSON.stringify({ message: "Triggered from GitHub Pages" })
         });
 
         const data = await r.json();
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          document.getElementById("current-status-box").innerHTML =
-            `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>
-             <p><b>Message:</b> ${data.message || "(none)"}</p>`;
+          document.getElementById("status-box").innerHTML =
+            `<p><span class="spinner"></span> Workflow triggered! Tracking run #${currentRunId}</p>`;
           setTimeout(updateCurrentStatus, 3000);
           setTimeout(updateHistoryFromServer, 5000);
         } else {
-          document.getElementById("current-status-box").innerHTML =
+          document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
       } catch (err) {
-        document.getElementById("current-status-box").innerHTML =
+        document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
@@ -224,13 +208,12 @@
       try {
         const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
-        const box = document.getElementById("current-status-box");
+        const box = document.getElementById("status-box");
 
         if (r.ok) {
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
               <p><span class="spinner"></span><b>${data.name}</b></p>
-              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: pending</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
@@ -240,38 +223,12 @@
             const icon = data.conclusion === "success" ? "✅" : "❌";
             box.innerHTML = `
               <p>${icon} <b>${data.name}</b></p>
-              <p><b>Message:</b> ${data.message || "(none)"}</p>
               <p>Status: ${data.status}</p>
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
             currentRunId = null;
           }
-        } else {
-          box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
-        }
-      } catch (err) {
-        document.getElementById("current-status-box").innerHTML =
-          `<p style="color:red;">⚠️ ${err.message}</p>`;
-      }
-    }
-
-    async function updateLatestStatus() {
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/status");
-        const data = await r.json();
-        const box = document.getElementById("status-box");
-
-        if (r.ok && data.id) {
-          const icon = data.conclusion === "success" ? "✅" :
-                       data.conclusion === "failure" ? "❌" : "⏳";
-          box.innerHTML = `
-            <p>${icon} <b>${data.name}</b></p>
-            <p><b>Message:</b> ${data.message || "(none)"}</p>
-            <p>Status: ${data.status}</p>
-            <p>Conclusion: ${data.conclusion || "pending"}</p>
-            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
         }
@@ -285,7 +242,10 @@
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
-        if (r.ok) renderHistory(data.runs);
+        if (r.ok) {
+          renderHistory(data.runs);
+          updateChart(data.runs);
+        }
       } catch (err) {
         console.error("History update failed:", err.message);
       }
@@ -303,19 +263,35 @@
         return `
           <tr class="${cls}" data-id="${run.id}">
             <td>${run.id}</td>
-            <td>${run.message || "(none)"}</td>
             <td>${run.status}</td>
             <td>${run.conclusion || "pending"}</td>
             <td><a href="${run.url}" target="_blank">🔗 View</a></td>
           </tr>
         `;
       }).join("");
+    }
 
-      document.querySelectorAll("#history-table tbody tr").forEach(row => {
-        row.addEventListener("click", () => {
-          currentRunId = row.dataset.id;
-          updateCurrentStatus();
-        });
+    function updateChart(runs) {
+      const counts = { success: 0, failure: 0, running: 0, other: 0 };
+
+      runs.forEach(run => {
+        if (run.conclusion === "success") counts.success++;
+        else if (run.conclusion === "failure") counts.failure++;
+        else if (run.status === "in_progress" || run.status === "queued") counts.running++;
+        else counts.other++;
+      });
+
+      const ctx = document.getElementById("statusChart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: ["Success", "Failure", "Running", "Other"],
+          datasets: [{
+            data: [counts.success, counts.failure, counts.running, counts.other],
+            backgroundColor: ["#22c55e", "#ef4444", "#f59e0b", "#6b7280"]
+          }]
+        }
       });
     }
 
@@ -324,12 +300,10 @@
     // Auto-refresh
     setInterval(() => {
       if (currentRunId) updateCurrentStatus();
-      updateLatestStatus();
       updateHistoryFromServer();
     }, 15000);
 
     // Initial load
-    updateLatestStatus();
     updateHistoryFromServer();
   </script>
 </body>
