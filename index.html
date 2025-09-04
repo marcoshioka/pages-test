@@ -142,12 +142,12 @@
         // ✅ Strict lock: ignore if API doesn't return the right run
         if (!r.ok || !data || String(data.id) !== String(currentRunId)) {
           box.innerHTML =
-            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b>...</p>`;
+            `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to appear...</p>`;
           setTimeout(updateCurrentStatus, 5000);
           return;
         }
 
-        // Render only the correct run
+        // ✅ Render only the correct run
         if (data.status === "queued" || data.status === "in_progress") {
           box.innerHTML = `
             <p><span class="spinner"></span><b>${data.name}</b></p>
