@@ -104,9 +104,26 @@
 
   <script>
     let currentRunId = null;
+    let lastKnownRunId = null;
     let chartInstance = null;
+    let statusFrozen = false; // ✅ freeze flag
+
+    async function captureLastRunId() {
+      try {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+        const data = await r.json();
+        if (r.ok && data.runs.length > 0) {
+          lastKnownRunId = data.runs[0].id;
+        }
+      } catch (err) {
+        console.error("Could not capture last run ID:", err.message);
+      }
+    }
 
     async function dispatch() {
+      await captureLastRunId();
+      statusFrozen = false;
+
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
@@ -114,14 +131,12 @@
           body: JSON.stringify({ message: "Triggered from page" })
         });
 
-        const data = await r.json();
-
-        if (r.ok && data.id) {
-          currentRunId = data.id;
+        if (r.ok) {
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Waiting for run <b>#${currentRunId}</b> to appear...</p>`;
-          pollTriggeredRun();
+            `<p><span class="spinner"></span> Waiting for the new run to appear...</p>`;
+          waitForNextRun();
         } else {
+          const data = await r.json();
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
@@ -131,48 +146,65 @@
       }
     }
 
-    async function pollTriggeredRun() {
-      if (!currentRunId) return;
+    async function waitForNextRun() {
+      if (statusFrozen) return; // ✅ stop if frozen
 
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
         const runs = data.runs || [];
-        const run = runs.find(r => String(r.id) === String(currentRunId));
-        const box = document.getElementById("status-box");
+        const newRun = runs.find(run => !lastKnownRunId || run.id > lastKnownRunId);
 
-        if (!run) {
-          box.innerHTML = `
-            <p><span class="spinner"></span>⏳ Still waiting for run <b>#${currentRunId}</b> to appear...</p>
-          `;
-          setTimeout(pollTriggeredRun, 5000);
-          return;
-        }
-
-        if (run.status === "queued" || run.status === "in_progress") {
-          box.innerHTML = `
-            <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
-            <p>Run ID: ${run.id}</p>
-            <p>Status: ${run.status}</p>
-            <p>Conclusion: pending</p>
-            <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
-          setTimeout(pollTriggeredRun, 5000);
+        if (newRun) {
+          currentRunId = newRun.id;
+          trackTriggeredRun(newRun);
         } else {
-          const icon = run.conclusion === "success" ? "✅" : "❌";
-          box.innerHTML = `
-            <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
-            <p>Run ID: ${run.id}</p>
-            <p>Status: ${run.status}</p>
-            <p>Conclusion: ${run.conclusion}</p>
-            <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-          `;
-          currentRunId = null; // stop tracking after finish
+          setTimeout(waitForNextRun, 3000);
         }
-
       } catch (err) {
-        document.getElementById("status-box").innerHTML =
-          `<p style="color:red;">⚠️ ${err.message}</p>`;
+        console.error("Error waiting for next run:", err.message);
+        setTimeout(waitForNextRun, 3000);
+      }
+    }
+
+    async function trackTriggeredRun(run) {
+      if (statusFrozen) return; // ✅ do nothing if frozen
+
+      const box = document.getElementById("status-box");
+
+      if (run.status === "queued" || run.status === "in_progress") {
+        box.innerHTML = `
+          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: pending</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+        setTimeout(() => refreshRun(run.id), 5000);
+      } else {
+        const icon = run.conclusion === "success" ? "✅" : "❌";
+        box.innerHTML = `
+          <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: ${run.conclusion}</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+        currentRunId = null;
+        statusFrozen = true; // ✅ freeze once completed
+      }
+    }
+
+    async function refreshRun(runId) {
+      if (statusFrozen) return;
+
+      try {
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+        const data = await r.json();
+        const run = (data.runs || []).find(r => String(r.id) === String(runId));
+        if (run) trackTriggeredRun(run);
+      } catch (err) {
+        console.error("Error refreshing run:", err.message);
       }
     }
 
@@ -257,7 +289,6 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Poll history independently (table + chart always refresh)
     setInterval(updateHistoryFromServer, 15000);
     updateHistoryFromServer();
   </script>
