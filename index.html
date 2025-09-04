@@ -19,18 +19,6 @@
       --radius: 12px;
       --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #111827;
-        --card-bg: #1f2937;
-        --text: #f9fafb;
-        --primary: #3b82f6;
-        --primary-dark: #2563eb;
-        --muted: #9ca3af;
-      }
-    }
-
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       background: var(--bg);
@@ -38,132 +26,42 @@
       padding: 32px;
       color: var(--text);
     }
-
-    h1 {
-      text-align: center;
-      font-size: 1.8rem;
-      margin-bottom: 24px;
-      color: var(--primary);
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      display: grid;
-      gap: 24px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow);
-    }
-
+    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 24px; color: var(--primary); }
+    .container { max-width: 1000px; margin: auto; display: grid; gap: 24px; }
+    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 12px 20px;
-      border-radius: var(--radius);
-      background: var(--primary);
-      color: #fff;
-      border: 0;
-      cursor: pointer;
-      font-weight: 500;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 20px; border-radius: var(--radius);
+      background: var(--primary); color: #fff; border: 0; cursor: pointer; font-weight: 500;
     }
-
-    .btn:hover {
-      background: var(--primary-dark);
-    }
-
-    .status-graph {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .status-card {
-      flex: 1;
-      min-width: 260px;
-    }
-
+    .btn:hover { background: var(--primary-dark); }
+    .status-graph { display: flex; gap: 20px; flex-wrap: wrap; }
+    .status-card { flex: 1; min-width: 260px; }
     #status-box {
-      border-radius: var(--radius);
-      border: 1px solid #37415133;
-      background: var(--bg);
-      padding: 14px;
-      font-size: 0.95rem;
-      min-height: 120px;
+      border-radius: var(--radius); border: 1px solid #37415133;
+      background: var(--bg); padding: 14px; font-size: 0.95rem; min-height: 120px;
     }
-
     .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid #e5e7eb; border-top: 3px solid var(--primary);
+      border-radius: 50%; animation: spin 1s linear infinite;
+      vertical-align: middle; margin-right: 8px;
     }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 14px;
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      background: var(--card-bg);
+      width: 100%; border-collapse: collapse; margin-top: 14px;
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--card-bg);
     }
-
-    th, td {
-      padding: 10px 12px;
-      text-align: left;
-      font-size: 0.9rem;
-    }
-
-    th {
-      background: #f3f4f6;
-      font-weight: 600;
-      color: #374151;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      th {
-        background: #374151;
-        color: #f9fafb;
-      }
-    }
-
+    th, td { padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+    th { background: #f3f4f6; font-weight: 600; color: #374151; }
     tr.success { background-color: #ecfdf5; }
     tr.failure { background-color: #fef2f2; }
     tr.running { background-color: #fffbeb; }
     tr.other   { background-color: #f9fafb; }
     tr:hover { background-color: #dbeafe; cursor: pointer; }
     tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
-
-    /* Chart */
-    .chart-wrapper {
-      flex: 1;
-      min-width: 220px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .chart-wrapper canvas {
-      max-width: 220px;
-      max-height: 220px;
-    }
+    .chart-wrapper { flex: 1; min-width: 220px; display: flex; justify-content: center; align-items: center; }
+    .chart-wrapper canvas { max-width: 220px; max-height: 220px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -179,7 +77,7 @@
 
     <div class="card status-graph">
       <div class="status-card">
-        <h2>Workflow Status</h2>
+        <h2>Triggered Workflow Status</h2>
         <div id="status-box">No workflow triggered yet.</div>
       </div>
       <div class="chart-wrapper">
@@ -222,7 +120,7 @@
           currentRunId = data.id;
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus(); // ✅ only this run
+          updateCurrentStatus(); // poll this run only
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -260,8 +158,8 @@
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            // ✅ Only after completion → refresh history
-            updateHistoryFromServer();
+            // Stop polling when completed
+            currentRunId = null;
           }
         } else {
           box.innerHTML =
@@ -309,7 +207,6 @@
 
     function updateChart(runs) {
       const counts = { success: 0, failure: 0, running: 0, other: 0 };
-
       runs.forEach(run => {
         if (run.conclusion === "success") counts.success++;
         else if (run.conclusion === "failure") counts.failure++;
@@ -356,9 +253,9 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Note: auto-refresh disabled for status box → only runs when triggered
-    // History updates only after run completion
-    updateHistoryFromServer();
+    // Polling loops:
+    setInterval(updateHistoryFromServer, 15000); // always refresh table + chart
+    updateHistoryFromServer(); // initial load
   </script>
 </body>
 </html>
