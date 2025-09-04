@@ -112,13 +112,8 @@
     }
 
     @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     table {
@@ -131,8 +126,7 @@
       background: var(--card-bg);
     }
 
-    th,
-    td {
+    th, td {
       padding: 10px 12px;
       text-align: left;
       font-size: 0.9rem;
@@ -151,31 +145,12 @@
       }
     }
 
-    tr.success {
-      background-color: #ecfdf5;
-    }
-
-    tr.failure {
-      background-color: #fef2f2;
-    }
-
-    tr.running {
-      background-color: #fffbeb;
-    }
-
-    tr.other {
-      background-color: #f9fafb;
-    }
-
-    tr:hover {
-      background-color: #dbeafe;
-      cursor: pointer;
-    }
-
-    tr.highlight {
-      outline: 2px solid var(--primary);
-      box-shadow: 0 0 6px var(--primary);
-    }
+    tr.success { background-color: #ecfdf5; }
+    tr.failure { background-color: #fef2f2; }
+    tr.running { background-color: #fffbeb; }
+    tr.other   { background-color: #f9fafb; }
+    tr:hover { background-color: #dbeafe; cursor: pointer; }
+    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
 
     /* Chart */
     .chart-wrapper {
@@ -246,10 +221,10 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          sessionStorage.setItem("currentRunId", currentRunId); // per tab
+          sessionStorage.setItem("currentRunId", currentRunId); // scoped per tab
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus(); // begin polling
+          updateCurrentStatus();
           setTimeout(updateHistoryFromServer, 2000);
         } else {
           document.getElementById("status-box").innerHTML =
@@ -269,37 +244,44 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
+        // Strict: only show if it matches the triggered ID
         if (r.ok && data && String(data.id) === String(currentRunId)) {
-          const runName = data.name || "GitHub Workflow";
+          renderStatusBox(data, box);
           if (data.status === "queued" || data.status === "in_progress") {
-            box.innerHTML = `
-          <p><span class="spinner"></span><b>${runName}</b></p>
-          <p>Run ID: ${data.id}</p>
-          <p>Status: ${data.status}</p>
-          <p>Conclusion: pending</p>
-          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
             setTimeout(updateCurrentStatus, 5000);
-          } else {
-            const icon = data.conclusion === "success" ? "✅" : "❌";
-            box.innerHTML = `
-          <p>${icon} <b>${runName}</b></p>
-          <p>Run ID: ${data.id}</p>
-          <p>Status: ${data.status}</p>
-          <p>Conclusion: ${data.conclusion}</p>
-          <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
-            // don't clear here → keep the result visible
           }
         } else {
+          // Don't switch to another run → just wait
           box.innerHTML = `
-        <p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to be available...</p>
-      `;
+            <p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to appear...</p>
+          `;
           setTimeout(updateCurrentStatus, 5000);
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
+      }
+    }
+
+    function renderStatusBox(run, box) {
+      const runName = run.name || "GitHub Workflow";
+      if (run.status === "queued" || run.status === "in_progress") {
+        box.innerHTML = `
+          <p><span class="spinner"></span><b>${runName}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: pending</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
+      } else {
+        const icon = run.conclusion === "success" ? "✅" : "❌";
+        box.innerHTML = `
+          <p>${icon} <b>${runName}</b></p>
+          <p>Run ID: ${run.id}</p>
+          <p>Status: ${run.status}</p>
+          <p>Conclusion: ${run.conclusion}</p>
+          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+        `;
       }
     }
 
@@ -403,5 +385,4 @@
     updateHistoryFromServer();
   </script>
 </body>
-
 </html>
