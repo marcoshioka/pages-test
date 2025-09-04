@@ -218,11 +218,10 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          // update status box immediately with triggered run
+          // update status box immediately
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Workflow triggered! Tracking run <b>#${currentRunId}</b></p>`;
-          // start polling only this run
-          updateCurrentStatus();
+            `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
+          updateCurrentStatus(); // begin polling
           setTimeout(updateHistoryFromServer, 2000);
         } else {
           document.getElementById("status-box").innerHTML =
@@ -261,7 +260,7 @@
               <p>Conclusion: ${data.conclusion}</p>
               <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
             `;
-            currentRunId = null; // stop tracking
+            currentRunId = null; // stop polling
           }
         } else {
           box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
@@ -315,6 +314,8 @@
         else counts.other++;
       });
 
+      const total = counts.success + counts.failure + counts.running + counts.other;
+
       const ctx = document.getElementById("statusChart").getContext("2d");
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, {
@@ -327,7 +328,18 @@
           }]
         },
         options: {
-          plugins: { legend: { position: "bottom" } },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.raw;
+                  const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return `${context.label}: ${value} (${percent}%)`;
+                }
+              }
+            }
+          },
           maintainAspectRatio: true
         }
       });
@@ -335,7 +347,7 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh only history
+    // Auto-refresh only history + triggered run
     setInterval(() => {
       if (currentRunId) updateCurrentStatus();
       updateHistoryFromServer();
