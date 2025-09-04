@@ -166,6 +166,7 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
   <h1>🚀 Run GitHub Workflow</h1>
@@ -218,7 +219,6 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          // update status box immediately
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
           updateCurrentStatus(); // begin polling
@@ -241,7 +241,8 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
-        if (r.ok) {
+        // ✅ Only update if API returned our run
+        if (r.ok && String(data.id) === String(currentRunId)) {
           if (data.status === "queued" || data.status === "in_progress") {
             box.innerHTML = `
               <p><span class="spinner"></span><b>${data.name}</b></p>
@@ -262,8 +263,6 @@
             `;
             currentRunId = null; // stop polling
           }
-        } else {
-          box.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
@@ -338,22 +337,29 @@
                   return `${context.label}: ${value} (${percent}%)`;
                 }
               }
+            },
+            datalabels: {
+              color: "#fff",
+              formatter: (value, ctx) => {
+                const percent = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                return value > 0 ? `${percent}%` : "";
+              }
             }
           },
           maintainAspectRatio: true
-        }
+        },
+        plugins: [ChartDataLabels]
       });
     }
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Auto-refresh only history + triggered run
+    // Auto-refresh
     setInterval(() => {
       if (currentRunId) updateCurrentStatus();
       updateHistoryFromServer();
     }, 15000);
 
-    // Initial load
     updateHistoryFromServer();
   </script>
 </body>
