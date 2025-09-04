@@ -120,7 +120,7 @@
           currentRunId = data.id;
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus(); // poll this run only
+          updateCurrentStatus(); // start polling only this run
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -139,33 +139,36 @@
         const data = await r.json();
         const box = document.getElementById("status-box");
 
-        if (r.ok && String(data.id) === String(currentRunId)) {
-          if (data.status === "queued" || data.status === "in_progress") {
-            box.innerHTML = `
-              <p><span class="spinner"></span><b>${data.name}</b></p>
-              <p>Run ID: ${data.id}</p>
-              <p>Status: ${data.status}</p>
-              <p>Conclusion: pending</p>
-              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-            `;
-            setTimeout(updateCurrentStatus, 5000);
-          } else {
-            const icon = data.conclusion === "success" ? "✅" : "❌";
-            box.innerHTML = `
-              <p>${icon} <b>${data.name}</b></p>
-              <p>Run ID: ${data.id}</p>
-              <p>Status: ${data.status}</p>
-              <p>Conclusion: ${data.conclusion}</p>
-              <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-            `;
-            // Stop polling when completed
-            currentRunId = null;
-          }
-        } else {
+        // ✅ Strict lock: ignore if API doesn't return the right run
+        if (!r.ok || !data || String(data.id) !== String(currentRunId)) {
           box.innerHTML =
             `<p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b>...</p>`;
           setTimeout(updateCurrentStatus, 5000);
+          return;
         }
+
+        // Render only the correct run
+        if (data.status === "queued" || data.status === "in_progress") {
+          box.innerHTML = `
+            <p><span class="spinner"></span><b>${data.name}</b></p>
+            <p>Run ID: ${data.id}</p>
+            <p>Status: ${data.status}</p>
+            <p>Conclusion: pending</p>
+            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
+          setTimeout(updateCurrentStatus, 5000);
+        } else {
+          const icon = data.conclusion === "success" ? "✅" : "❌";
+          box.innerHTML = `
+            <p>${icon} <b>${data.name}</b></p>
+            <p>Run ID: ${data.id}</p>
+            <p>Status: ${data.status}</p>
+            <p>Conclusion: ${data.conclusion}</p>
+            <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
+          currentRunId = null; // stop polling after completion
+        }
+
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
@@ -253,8 +256,8 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Polling loops:
-    setInterval(updateHistoryFromServer, 15000); // always refresh table + chart
+    // Poll history independently (table + chart always refresh)
+    setInterval(updateHistoryFromServer, 15000);
     updateHistoryFromServer(); // initial load
   </script>
 </body>
