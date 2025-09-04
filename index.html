@@ -19,7 +19,6 @@
       --radius: 12px;
       --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
-
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       background: var(--bg);
@@ -27,148 +26,42 @@
       padding: 32px;
       color: var(--text);
     }
-
-    h1 {
-      text-align: center;
-      font-size: 1.8rem;
-      margin-bottom: 24px;
-      color: var(--primary);
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      display: grid;
-      gap: 24px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow);
-    }
-
+    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 24px; color: var(--primary); }
+    .container { max-width: 1000px; margin: auto; display: grid; gap: 24px; }
+    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 20px;
-      border-radius: var(--radius);
-      background: var(--primary);
-      color: #fff;
-      border: 0;
-      cursor: pointer;
-      font-weight: 500;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 20px; border-radius: var(--radius);
+      background: var(--primary); color: #fff; border: 0; cursor: pointer; font-weight: 500;
     }
-
-    .btn:hover {
-      background: var(--primary-dark);
-    }
-
-    .status-graph {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .status-card {
-      flex: 1;
-      min-width: 260px;
-    }
-
+    .btn:hover { background: var(--primary-dark); }
+    .status-graph { display: flex; gap: 20px; flex-wrap: wrap; }
+    .status-card { flex: 1; min-width: 260px; }
     #status-box {
-      border-radius: var(--radius);
-      border: 1px solid #37415133;
-      background: var(--bg);
-      padding: 14px;
-      font-size: 0.95rem;
-      min-height: 120px;
+      border-radius: var(--radius); border: 1px solid #37415133;
+      background: var(--bg); padding: 14px; font-size: 0.95rem; min-height: 120px;
     }
-
     .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid #e5e7eb; border-top: 3px solid var(--primary);
+      border-radius: 50%; animation: spin 1s linear infinite;
+      vertical-align: middle; margin-right: 8px;
     }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 14px;
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      background: var(--card-bg);
+      width: 100%; border-collapse: collapse; margin-top: 14px;
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--card-bg);
     }
-
-    th,
-    td {
-      padding: 10px 12px;
-      text-align: left;
-      font-size: 0.9rem;
-    }
-
-    th {
-      background: #f3f4f6;
-      font-weight: 600;
-      color: #374151;
-    }
-
-    tr.success {
-      background-color: #ecfdf5;
-    }
-
-    tr.failure {
-      background-color: #fef2f2;
-    }
-
-    tr.running {
-      background-color: #fffbeb;
-    }
-
-    tr.other {
-      background-color: #f9fafb;
-    }
-
-    tr:hover {
-      background-color: #dbeafe;
-      cursor: pointer;
-    }
-
-    tr.highlight {
-      outline: 2px solid var(--primary);
-      box-shadow: 0 0 6px var(--primary);
-    }
-
-    .chart-wrapper {
-      flex: 1;
-      min-width: 220px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .chart-wrapper canvas {
-      max-width: 220px;
-      max-height: 220px;
-    }
+    th, td { padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+    th { background: #f3f4f6; font-weight: 600; color: #374151; }
+    tr.success { background-color: #ecfdf5; }
+    tr.failure { background-color: #fef2f2; }
+    tr.running { background-color: #fffbeb; }
+    tr.other   { background-color: #f9fafb; }
+    tr:hover { background-color: #dbeafe; cursor: pointer; }
+    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
+    .chart-wrapper { flex: 1; min-width: 220px; display: flex; justify-content: center; align-items: center; }
+    .chart-wrapper canvas { max-width: 220px; max-height: 220px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -226,7 +119,7 @@
         if (r.ok && data.id) {
           currentRunId = data.id;
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Waiting for run <b>#${currentRunId}</b> to start...</p>`;
+            `<p><span class="spinner"></span> Waiting for run <b>#${currentRunId}</b> to appear...</p>`;
           pollTriggeredRun();
         } else {
           document.getElementById("status-box").innerHTML =
@@ -242,62 +135,44 @@
       if (!currentRunId) return;
 
       try {
-        // 1) Try direct API
-        const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
+        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
+        const runs = data.runs || [];
+        const run = runs.find(r => String(r.id) === String(currentRunId));
+        const box = document.getElementById("status-box");
 
-        if (r.ok && data && String(data.id) === String(currentRunId)) {
-          renderStatus(data);
-          if (data.status === "queued" || data.status === "in_progress") {
-            setTimeout(pollTriggeredRun, 5000);
-          } else {
-            currentRunId = null; // stop after completion
-          }
+        if (!run) {
+          box.innerHTML = `
+            <p><span class="spinner"></span>⏳ Still waiting for run <b>#${currentRunId}</b> to appear...</p>
+          `;
+          setTimeout(pollTriggeredRun, 5000);
           return;
         }
 
-        // 2) If not found, fall back to history
-        const historyResp = await fetch("https://pages-test-sooty.vercel.app/api/history");
-        const historyData = await historyResp.json();
-        const run = historyData.runs.find(r => String(r.id) === String(currentRunId));
-
-        if (run) {
-          renderStatus(run);
-          if (run.status === "queued" || run.status === "in_progress") {
-            setTimeout(pollTriggeredRun, 5000);
-          } else {
-            currentRunId = null;
-          }
-        } else {
-          document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span>⏳ Still waiting for run <b>#${currentRunId}</b> to appear...</p>`;
+        if (run.status === "queued" || run.status === "in_progress") {
+          box.innerHTML = `
+            <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
+            <p>Run ID: ${run.id}</p>
+            <p>Status: ${run.status}</p>
+            <p>Conclusion: pending</p>
+            <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
           setTimeout(pollTriggeredRun, 5000);
+        } else {
+          const icon = run.conclusion === "success" ? "✅" : "❌";
+          box.innerHTML = `
+            <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
+            <p>Run ID: ${run.id}</p>
+            <p>Status: ${run.status}</p>
+            <p>Conclusion: ${run.conclusion}</p>
+            <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+          `;
+          currentRunId = null; // stop tracking after finish
         }
+
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
-      }
-    }
-
-    function renderStatus(run) {
-      const box = document.getElementById("status-box");
-      if (run.status === "queued" || run.status === "in_progress") {
-        box.innerHTML = `
-        <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
-        <p>Run ID: ${run.id}</p>
-        <p>Status: ${run.status}</p>
-        <p>Conclusion: pending</p>
-        <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-      `;
-      } else {
-        const icon = run.conclusion === "success" ? "✅" : "❌";
-        box.innerHTML = `
-        <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
-        <p>Run ID: ${run.id}</p>
-        <p>Status: ${run.status}</p>
-        <p>Conclusion: ${run.conclusion}</p>
-        <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-      `;
       }
     }
 
@@ -324,13 +199,13 @@
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
         return `
-        <tr class="${cls}" data-id="${run.id}">
-          <td>${run.id}</td>
-          <td>${run.status}</td>
-          <td>${run.conclusion || "pending"}</td>
-          <td><a href="${run.url}" target="_blank">🔗 View</a></td>
-        </tr>
-      `;
+          <tr class="${cls}" data-id="${run.id}">
+            <td>${run.id}</td>
+            <td>${run.status}</td>
+            <td>${run.conclusion || "pending"}</td>
+            <td><a href="${run.url}" target="_blank">🔗 View</a></td>
+          </tr>
+        `;
       }).join("");
     }
 
@@ -382,11 +257,9 @@
 
     document.getElementById("run").addEventListener("click", dispatch);
 
-    // Poll history independently
+    // Poll history independently (table + chart always refresh)
     setInterval(updateHistoryFromServer, 15000);
     updateHistoryFromServer();
   </script>
-
 </body>
-
 </html>
