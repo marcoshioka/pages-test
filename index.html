@@ -211,7 +211,6 @@
 
   <script>
     let currentRunId = null;
-    let trackedRun = null; // ✅ keep last known data for currentRunId
     let chartInstance = null;
 
     async function dispatch() {
@@ -226,10 +225,9 @@
 
         if (r.ok && data.id) {
           currentRunId = data.id;
-          trackedRun = null; // reset
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Tracking run <b>#${currentRunId}</b>...</p>`;
-          updateCurrentStatus();
+            `<p><span class="spinner"></span> Waiting for run <b>#${currentRunId}</b> to start...</p>`;
+          pollTriggeredRun();
         } else {
           document.getElementById("status-box").innerHTML =
             `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
@@ -240,70 +238,66 @@
       }
     }
 
-    async function updateCurrentStatus() {
+    async function pollTriggeredRun() {
       if (!currentRunId) return;
 
       try {
+        // 1) Try direct API
         const r = await fetch(`https://pages-test-sooty.vercel.app/api/run/${currentRunId}`);
         const data = await r.json();
-        const box = document.getElementById("status-box");
 
-        // 🚨 If the API doesn’t return exactly this run, ignore completely
-        if (!r.ok || !data || String(data.id) !== String(currentRunId)) {
-          box.innerHTML = `
-        <p><span class="spinner"></span>⏳ Waiting for run <b>#${currentRunId}</b> to be recognized...</p>
-      `;
-          setTimeout(updateCurrentStatus, 5000);
+        if (r.ok && data && String(data.id) === String(currentRunId)) {
+          renderStatus(data);
+          if (data.status === "queued" || data.status === "in_progress") {
+            setTimeout(pollTriggeredRun, 5000);
+          } else {
+            currentRunId = null; // stop after completion
+          }
           return;
         }
 
-        // ✅ Only render this exact run
-        if (data.status === "queued" || data.status === "in_progress") {
-          box.innerHTML = `
-        <p><span class="spinner"></span><b>${data.name || "GitHub Workflow"}</b></p>
-        <p>Run ID: ${data.id}</p>
-        <p>Status: ${data.status}</p>
-        <p>Conclusion: pending</p>
-        <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-      `;
-          setTimeout(updateCurrentStatus, 5000);
-        } else {
-          const icon = data.conclusion === "success" ? "✅" : "❌";
-          box.innerHTML = `
-        <p>${icon} <b>${data.name || "GitHub Workflow"}</b></p>
-        <p>Run ID: ${data.id}</p>
-        <p>Status: ${data.status}</p>
-        <p>Conclusion: ${data.conclusion}</p>
-        <p><a href="${data.url}" target="_blank">🔗 View on GitHub</a></p>
-      `;
-          currentRunId = null; // stop tracking
-        }
+        // 2) If not found, fall back to history
+        const historyResp = await fetch("https://pages-test-sooty.vercel.app/api/history");
+        const historyData = await historyResp.json();
+        const run = historyData.runs.find(r => String(r.id) === String(currentRunId));
 
+        if (run) {
+          renderStatus(run);
+          if (run.status === "queued" || run.status === "in_progress") {
+            setTimeout(pollTriggeredRun, 5000);
+          } else {
+            currentRunId = null;
+          }
+        } else {
+          document.getElementById("status-box").innerHTML =
+            `<p><span class="spinner"></span>⏳ Still waiting for run <b>#${currentRunId}</b> to appear...</p>`;
+          setTimeout(pollTriggeredRun, 5000);
+        }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       }
     }
 
-
-    function renderStatus(run, box) {
+    function renderStatus(run) {
+      const box = document.getElementById("status-box");
       if (run.status === "queued" || run.status === "in_progress") {
         box.innerHTML = `
-          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
-          <p>Run ID: ${run.id}</p>
-          <p>Status: ${run.status}</p>
-          <p>Conclusion: pending</p>
-          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
+        <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
+        <p>Run ID: ${run.id}</p>
+        <p>Status: ${run.status}</p>
+        <p>Conclusion: pending</p>
+        <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+      `;
       } else {
         const icon = run.conclusion === "success" ? "✅" : "❌";
         box.innerHTML = `
-          <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
-          <p>Run ID: ${run.id}</p>
-          <p>Status: ${run.status}</p>
-          <p>Conclusion: ${run.conclusion}</p>
-          <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
-        `;
+        <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
+        <p>Run ID: ${run.id}</p>
+        <p>Status: ${run.status}</p>
+        <p>Conclusion: ${run.conclusion}</p>
+        <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
+      `;
       }
     }
 
@@ -330,13 +324,13 @@
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
         return `
-          <tr class="${cls}" data-id="${run.id}">
-            <td>${run.id}</td>
-            <td>${run.status}</td>
-            <td>${run.conclusion || "pending"}</td>
-            <td><a href="${run.url}" target="_blank">🔗 View</a></td>
-          </tr>
-        `;
+        <tr class="${cls}" data-id="${run.id}">
+          <td>${run.id}</td>
+          <td>${run.status}</td>
+          <td>${run.conclusion || "pending"}</td>
+          <td><a href="${run.url}" target="_blank">🔗 View</a></td>
+        </tr>
+      `;
       }).join("");
     }
 
@@ -392,6 +386,7 @@
     setInterval(updateHistoryFromServer, 15000);
     updateHistoryFromServer();
   </script>
+
 </body>
 
 </html>
