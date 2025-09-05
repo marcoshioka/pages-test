@@ -5,15 +5,14 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
   workflow_dispatch:
     inputs:
       message:
         description: 'A custom message'
         required: false
         default: 'Hello from API!'
-      spec:
-        description: 'Cypress spec file to run (leave empty to run all tests)'
+      spec: # 👈 NEW
+        description: 'Cypress spec file to run'
         required: false
         default: 'all'
 
@@ -35,13 +34,13 @@ jobs:
       - run: npm ci
       - run: npm run build --if-present
 
-      - name: Run Cypress
+      - name: Run Cypress tests
         run: |
           if [ "${{ github.event.inputs.spec }}" = "all" ]; then
-            echo "🚀 Running ALL Cypress tests"
+            echo "▶ Running all Cypress tests"
             npx cypress run
           else
-            echo "🎯 Running Cypress spec: ${{ github.event.inputs.spec }}"
+            echo "▶ Running Cypress spec: ${{ github.event.inputs.spec }}"
             npx cypress run --spec "${{ github.event.inputs.spec }}"
           fi
 
