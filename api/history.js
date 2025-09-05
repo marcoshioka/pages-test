@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // Fetch the latest workflow runs
+    // 1. Get last 10 runs
     const ghRes = await fetch(
       "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=10",
       {
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    // Fetch full details for each run to include inputs
+    // 2. Fetch details for each run → to get workflow_dispatch inputs
     const runsWithInputs = await Promise.all(
       data.workflow_runs.map(async (run) => {
         try {
@@ -43,17 +43,18 @@ export default async function handler(req, res) {
             conclusion: run.conclusion,
             url: run.html_url,
             message: run.head_commit?.message || null,
-            inputs: detail.event === "workflow_dispatch" ? detail.inputs : {}
+            // 👇 use inputs.spec when available
+            spec: detail?.inputs?.spec || "all"
           };
         } catch (err) {
-          console.error("Error fetching run detail:", err);
+          console.error("Error fetching run details:", err);
           return {
             id: run.id,
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
             message: run.head_commit?.message || null,
-            inputs: {}
+            spec: "all"
           };
         }
       })

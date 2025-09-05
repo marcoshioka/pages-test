@@ -291,10 +291,16 @@
         if (run.conclusion === "failure") cls = "failure";
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
-        // Show spec name nicely
-        const specLabel = run.message && run.message.includes("cypress/")
-          ? run.message.replace("Triggered ", "")
-          : "✨ All Tests";
+        // ✅ Show spec name nicely
+        let specLabel = "✨ All Tests";
+        if (run.message) {
+          if (run.message.includes("cypress/")) {
+            const fullPath = run.message.replace("Triggered ", "");
+            specLabel = fullPath.split("/").pop(); // only filename
+          } else if (run.message.includes("full test suite")) {
+            specLabel = "✨ All Tests";
+          }
+        }
 
         return `
           <tr class="${cls}" data-id="${run.id}">
