@@ -11,8 +11,8 @@ on:
         description: 'A custom message'
         required: false
         default: 'Hello from API!'
-      spec: # 👈 NEW
-        description: 'Cypress spec file to run'
+      spec:
+        description: 'Cypress spec file to run (or "all")'
         required: false
         default: 'all'
 
@@ -47,3 +47,4 @@ jobs:
       - name: Show message (if provided)
         run: |
           echo "Message: ${{ github.event.inputs.message }}"
+          echo "Spec: ${{ github.event.inputs.spec }}"
