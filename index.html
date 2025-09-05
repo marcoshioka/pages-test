@@ -27,14 +27,15 @@
       color: var(--text);
     }
     h1 { text-align: center; font-size: 1.8rem; margin-bottom: 24px; color: var(--primary); }
-    .container { max-width: 1000px; margin: auto; display: grid; gap: 24px; }
+    .container { max-width: 1100px; margin: auto; display: grid; gap: 24px; }
     .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
       padding: 12px 20px; border-radius: var(--radius);
       background: var(--primary); color: #fff; border: 0; cursor: pointer; font-weight: 500;
     }
-    .btn:hover { background: var(--primary-dark); }
+    .btn[disabled] { background: var(--muted); cursor: not-allowed; }
     .status-graph { display: flex; gap: 20px; flex-wrap: wrap; }
     .status-card { flex: 1; min-width: 260px; }
     #status-box {
@@ -45,7 +46,7 @@
       display: inline-block; width: 18px; height: 18px;
       border: 3px solid #e5e7eb; border-top: 3px solid var(--primary);
       border-radius: 50%; animation: spin 1s linear infinite;
-      vertical-align: middle; margin-right: 8px;
+      vertical-align: middle;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     table {
@@ -62,6 +63,14 @@
     tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
     .chart-wrapper { flex: 1; min-width: 220px; display: flex; justify-content: center; align-items: center; }
     .chart-wrapper canvas { max-width: 220px; max-height: 220px; }
+    select {
+      padding: 8px;
+      border-radius: var(--radius);
+      border: 1px solid #ccc;
+      margin-top: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -72,6 +81,37 @@
   <div class="container">
 
     <div class="card">
+      <label for="specSelect"><b>Select what to run:</b></label><br />
+      <select id="specSelect">
+        <option value="all">✨ Run All Tests</option>
+
+        <optgroup label="1-getting-started">
+          <option value="cypress/e2e/1-getting-started/todo.cy.js">todo.cy.js</option>
+        </optgroup>
+
+        <optgroup label="2-advanced-examples">
+          <option value="cypress/e2e/2-advanced-examples/actions.cy.js">actions.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/aliasing.cy.js">aliasing.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/assertions.cy.js">assertions.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/connectors.cy.js">connectors.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/cookies.cy.js">cookies.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/cypress_api.cy.js">cypress_api.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/files.cy.js">files.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/location.cy.js">location.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/misc.cy.js">misc.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/navigation.cy.js">navigation.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/network_requests.cy.js">network_requests.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/querying.cy.js">querying.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/spies_stubs_clocks.cy.js">spies_stubs_clocks.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/storage.cy.js">storage.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/traversal.cy.js">traversal.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/utilities.cy.js">utilities.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/viewport.cy.js">viewport.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/waiting.cy.js">waiting.cy.js</option>
+          <option value="cypress/e2e/2-advanced-examples/window.cy.js">window.cy.js</option>
+        </optgroup>
+      </select>
+      <br /><br />
       <button id="run" class="btn">▶ Run Workflow</button>
     </div>
 
@@ -91,6 +131,7 @@
         <thead>
           <tr>
             <th>Run ID</th>
+            <th>Spec</th>
             <th>Status</th>
             <th>Conclusion</th>
             <th>Link</th>
@@ -106,7 +147,8 @@
     let currentRunId = null;
     let lastKnownRunId = null;
     let chartInstance = null;
-    let statusFrozen = false; // ✅ freeze flag
+    let statusFrozen = false;
+    let triggeredSpec = "all";
 
     async function captureLastRunId() {
       try {
@@ -124,16 +166,31 @@
       await captureLastRunId();
       statusFrozen = false;
 
+      triggeredSpec = document.getElementById("specSelect").value;
+      const runButton = document.getElementById("run");
+
+      // Disable button + show spinner
+      runButton.disabled = true;
+      runButton.innerHTML = `<span class="spinner"></span> Running...`;
+
+      const body = {
+        spec: triggeredSpec,
+        message: triggeredSpec === "all"
+          ? "Triggered full test suite"
+          : `Triggered ${triggeredSpec}`
+      };
+
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: "Triggered from page" })
+          body: JSON.stringify(body)
         });
 
         if (r.ok) {
+          const label = triggeredSpec === "all" ? "✨ All Tests" : triggeredSpec.split("/").pop();
           document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Waiting for the new run to appear...</p>`;
+            `<p><span class="spinner"></span> Waiting for new run (<b>${label}</b>)...</p>`;
           waitForNextRun();
         } else {
           const data = await r.json();
@@ -143,11 +200,15 @@
       } catch (err) {
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
+      } finally {
+        // Restore button
+        runButton.disabled = false;
+        runButton.innerHTML = "▶ Run Workflow";
       }
     }
 
     async function waitForNextRun() {
-      if (statusFrozen) return; // ✅ stop if frozen
+      if (statusFrozen) return;
 
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
@@ -168,13 +229,14 @@
     }
 
     async function trackTriggeredRun(run) {
-      if (statusFrozen) return; // ✅ do nothing if frozen
+      if (statusFrozen) return;
 
       const box = document.getElementById("status-box");
+      const label = triggeredSpec === "all" ? "✨ All Tests" : triggeredSpec.split("/").pop();
 
       if (run.status === "queued" || run.status === "in_progress") {
         box.innerHTML = `
-          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"}</b></p>
+          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"} – ${label}</b></p>
           <p>Run ID: ${run.id}</p>
           <p>Status: ${run.status}</p>
           <p>Conclusion: pending</p>
@@ -184,20 +246,19 @@
       } else {
         const icon = run.conclusion === "success" ? "✅" : "❌";
         box.innerHTML = `
-          <p>${icon} <b>${run.name || "GitHub Workflow"}</b></p>
+          <p>${icon} <b>${run.name || "GitHub Workflow"} – ${label}</b></p>
           <p>Run ID: ${run.id}</p>
           <p>Status: ${run.status}</p>
           <p>Conclusion: ${run.conclusion}</p>
           <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
         `;
         currentRunId = null;
-        statusFrozen = true; // ✅ freeze once completed
+        statusFrozen = true;
       }
     }
 
     async function refreshRun(runId) {
       if (statusFrozen) return;
-
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
@@ -230,9 +291,15 @@
         if (run.conclusion === "failure") cls = "failure";
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
+        // Show spec name nicely
+        const specLabel = run.message && run.message.includes("cypress/")
+          ? run.message.replace("Triggered ", "")
+          : "✨ All Tests";
+
         return `
           <tr class="${cls}" data-id="${run.id}">
             <td>${run.id}</td>
+            <td>${specLabel}</td>
             <td>${run.status}</td>
             <td>${run.conclusion || "pending"}</td>
             <td><a href="${run.url}" target="_blank">🔗 View</a></td>
