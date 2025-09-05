@@ -252,162 +252,154 @@
   </div>
 
   <script>
-    let currentRunId = null;
-    let lastKnownRunId = null;
-    let chartInstance = null;
-    let statusFrozen = false;
-    let triggeredSpec = "all";
+  let currentRunId = null;
+  let lastKnownRunId = null;
+  let chartInstance = null;
+  let statusFrozen = false;
+  let triggeredSpec = "all";
 
-    async function captureLastRunId() {
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
-        const data = await r.json();
-        if (r.ok && data.runs.length > 0) {
-          lastKnownRunId = data.runs[0].id;
-        }
-      } catch (err) {
-        console.error("Could not capture last run ID:", err.message);
+  async function captureLastRunId() {
+    try {
+      const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+      const data = await r.json();
+      if (r.ok && data.runs.length > 0) {
+        lastKnownRunId = data.runs[0].id;
       }
+    } catch (err) {
+      console.error("Could not capture last run ID:", err.message);
     }
+  }
 
-    async function dispatch() {
-      await captureLastRunId();
-      statusFrozen = false;
+  async function dispatch() {
+    await captureLastRunId();
+    statusFrozen = false;
 
-      triggeredSpec = document.getElementById("specSelect").value;
-      const runButton = document.getElementById("run");
+    triggeredSpec = document.getElementById("specSelect").value;
+    const runButton = document.getElementById("run");
 
-      // Disable button + show spinner
-      runButton.disabled = true;
-      runButton.innerHTML = `<span class="spinner"></span> Running...`;
+    runButton.disabled = true;
+    runButton.innerHTML = `<span class="spinner"></span> Running...`;
 
-      const body = {
-        spec: triggeredSpec,
-        message: triggeredSpec === "all"
-          ? "Triggered full test suite"
-          : `Triggered ${triggeredSpec}`
-      };
+    const body = {
+      spec: triggeredSpec,
+      message: triggeredSpec === "all"
+        ? "Triggered full test suite"
+        : `Triggered ${triggeredSpec}`
+    };
 
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
+    try {
+      const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
 
-        if (r.ok) {
-          const label = triggeredSpec === "all" ? "✨ All Tests" : triggeredSpec.split("/").pop();
-          document.getElementById("status-box").innerHTML =
-            `<p><span class="spinner"></span> Waiting for new run (<b>${label}</b>)...</p>`;
-          waitForNextRun();
-        } else {
-          const data = await r.json();
-          document.getElementById("status-box").innerHTML =
-            `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
-        }
-      } catch (err) {
+      if (r.ok) {
+        const label = triggeredSpec === "all" ? "✨ All Tests" : triggeredSpec.split("/").pop();
         document.getElementById("status-box").innerHTML =
-          `<p style="color:red;">⚠️ ${err.message}</p>`;
-      } finally {
-        // Restore button
-        runButton.disabled = false;
-        runButton.innerHTML = "▶ Run Workflow";
-      }
-    }
-
-    async function waitForNextRun() {
-      if (statusFrozen) return;
-
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+          `<p><span class="spinner"></span> Waiting for new run (<b>${label}</b>)...</p>`;
+        waitForNextRun();
+      } else {
         const data = await r.json();
-        const runs = data.runs || [];
-        const newRun = runs.find(run => !lastKnownRunId || run.id > lastKnownRunId);
+        document.getElementById("status-box").innerHTML =
+          `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
+      }
+    } catch (err) {
+      document.getElementById("status-box").innerHTML =
+        `<p style="color:red;">⚠️ ${err.message}</p>`;
+    } finally {
+      runButton.disabled = false;
+      runButton.innerHTML = "▶ Run Workflow";
+    }
+  }
 
-        if (newRun) {
-          currentRunId = newRun.id;
-          trackTriggeredRun(newRun);
-        } else {
-          setTimeout(waitForNextRun, 3000);
-        }
-      } catch (err) {
-        console.error("Error waiting for next run:", err.message);
+  async function waitForNextRun() {
+    if (statusFrozen) return;
+
+    try {
+      const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+      const data = await r.json();
+      const runs = data.runs || [];
+      const newRun = runs.find(run => !lastKnownRunId || run.id > lastKnownRunId);
+
+      if (newRun) {
+        currentRunId = newRun.id;
+        trackTriggeredRun(newRun);
+      } else {
         setTimeout(waitForNextRun, 3000);
       }
+    } catch (err) {
+      console.error("Error waiting for next run:", err.message);
+      setTimeout(waitForNextRun, 3000);
     }
+  }
 
-    async function trackTriggeredRun(run) {
-      if (statusFrozen) return;
+  async function trackTriggeredRun(run) {
+    if (statusFrozen) return;
 
-      const box = document.getElementById("status-box");
+    const box = document.getElementById("status-box");
+    const label = run.spec === "all" ? "✨ All Tests" : run.spec.split("/").pop();
 
-      // 👇 Use the spec from backend instead of guessing
-      const label = run.spec && run.spec !== "all"
-        ? run.spec.split("/").pop()
-        : "✨ All Tests";
-
-      if (run.status === "queued" || run.status === "in_progress") {
-        box.innerHTML = `
+    if (run.status === "queued" || run.status === "in_progress") {
+      box.innerHTML = `
         <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"} – ${label}</b></p>
         <p>Run ID: ${run.id}</p>
         <p>Status: ${run.status}</p>
         <p>Conclusion: pending</p>
         <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
       `;
-        setTimeout(() => refreshRun(run.id), 5000);
-      } else {
-        const icon = run.conclusion === "success" ? "✅" : "❌";
-        box.innerHTML = `
+      setTimeout(() => refreshRun(run.id), 5000);
+    } else {
+      const icon = run.conclusion === "success" ? "✅" : "❌";
+      box.innerHTML = `
         <p>${icon} <b>${run.name || "GitHub Workflow"} – ${label}</b></p>
         <p>Run ID: ${run.id}</p>
         <p>Status: ${run.status}</p>
         <p>Conclusion: ${run.conclusion}</p>
         <p><a href="${run.url}" target="_blank">🔗 View on GitHub</a></p>
       `;
-        currentRunId = null;
-        statusFrozen = true;
-      }
+      currentRunId = null;
+      statusFrozen = true;
     }
+  }
 
-    async function refreshRun(runId) {
-      if (statusFrozen) return;
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
-        const data = await r.json();
-        const run = (data.runs || []).find(r => String(r.id) === String(runId));
-        if (run) trackTriggeredRun(run);
-      } catch (err) {
-        console.error("Error refreshing run:", err.message);
-      }
+  async function refreshRun(runId) {
+    if (statusFrozen) return;
+    try {
+      const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+      const data = await r.json();
+      const run = (data.runs || []).find(r => String(r.id) === String(runId));
+      if (run) trackTriggeredRun(run);
+    } catch (err) {
+      console.error("Error refreshing run:", err.message);
     }
+  }
 
-    async function updateHistoryFromServer() {
-      try {
-        const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
-        const data = await r.json();
-        if (r.ok) {
-          renderHistory(data.runs);
-          updateChart(data.runs);
-        }
-      } catch (err) {
-        console.error("History update failed:", err.message);
+  async function updateHistoryFromServer() {
+    try {
+      const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
+      const data = await r.json();
+      if (r.ok) {
+        renderHistory(data.runs);
+        updateChart(data.runs);
       }
+    } catch (err) {
+      console.error("History update failed:", err.message);
     }
+  }
 
-    function renderHistory(runs) {
-      const tbody = document.querySelector("#history-table tbody");
-      tbody.innerHTML = runs.map(run => {
-        let cls = "other";
-        if (run.status === "in_progress" || run.status === "queued") cls = "running";
-        if (run.conclusion === "success") cls = "success";
-        if (run.conclusion === "failure") cls = "failure";
-        if (String(run.id) === String(currentRunId)) cls += " highlight";
+  function renderHistory(runs) {
+    const tbody = document.querySelector("#history-table tbody");
+    tbody.innerHTML = runs.map(run => {
+      let cls = "other";
+      if (run.status === "in_progress" || run.status === "queued") cls = "running";
+      if (run.conclusion === "success") cls = "success";
+      if (run.conclusion === "failure") cls = "failure";
+      if (String(run.id) === String(currentRunId)) cls += " highlight";
 
-        const specLabel = run.spec && run.spec !== "all"
-          ? run.spec.split("/").pop()
-          : "✨ All Tests";
+      const specLabel = run.spec === "all" ? "✨ All Tests" : run.spec.split("/").pop();
 
-        return `
+      return `
         <tr class="${cls}" data-id="${run.id}">
           <td>${run.id}</td>
           <td>${specLabel}</td>
@@ -416,16 +408,60 @@
           <td><a href="${run.url}" target="_blank">🔗 View</a></td>
         </tr>
       `;
-      }).join("");
-    }
+    }).join("");
+  }
 
-    // chart.js stays the same...
+  function updateChart(runs) {
+    const counts = { success: 0, failure: 0, running: 0, other: 0 };
+    runs.forEach(run => {
+      if (run.conclusion === "success") counts.success++;
+      else if (run.conclusion === "failure") counts.failure++;
+      else if (run.status === "in_progress" || run.status === "queued") counts.running++;
+      else counts.other++;
+    });
 
-    document.getElementById("run").addEventListener("click", dispatch);
+    const total = counts.success + counts.failure + counts.running + counts.other;
+    const ctx = document.getElementById("statusChart").getContext("2d");
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: ["Success", "Failure", "Running", "Other"],
+        datasets: [{
+          data: [counts.success, counts.failure, counts.running, counts.other],
+          backgroundColor: ["#22c55e", "#ef4444", "#f59e0b", "#6b7280"]
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const value = context.raw;
+                const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return `${context.label}: ${value} (${percent}%)`;
+              }
+            }
+          },
+          datalabels: {
+            color: "#fff",
+            formatter: (value) => {
+              const percent = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+              return value > 0 ? `${percent}%` : "";
+            }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  }
 
-    setInterval(updateHistoryFromServer, 15000);
-    updateHistoryFromServer();
-  </script>
+  document.getElementById("run").addEventListener("click", dispatch);
+
+  setInterval(updateHistoryFromServer, 15000);
+  updateHistoryFromServer();
+</script>
 
 </body>
 
