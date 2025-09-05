@@ -169,6 +169,7 @@
       triggeredSpec = document.getElementById("specSelect").value;
       const runButton = document.getElementById("run");
 
+      // Disable button + show spinner
       runButton.disabled = true;
       runButton.innerHTML = `<span class="spinner"></span> Running...`;
 
@@ -200,6 +201,7 @@
         document.getElementById("status-box").innerHTML =
           `<p style="color:red;">⚠️ ${err.message}</p>`;
       } finally {
+        // Restore button
         runButton.disabled = false;
         runButton.innerHTML = "▶ Run Workflow";
       }
@@ -207,6 +209,7 @@
 
     async function waitForNextRun() {
       if (statusFrozen) return;
+
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
@@ -227,9 +230,8 @@
 
     async function trackTriggeredRun(run) {
       if (statusFrozen) return;
-      const box = document.getElementById("status-box");
 
-      // ✅ Use spec directly from API
+      const box = document.getElementById("status-box");
       const label = run.spec && run.spec !== "all"
         ? run.spec.split("/").pop()
         : "✨ All Tests";
@@ -291,7 +293,7 @@
         if (run.conclusion === "failure") cls = "failure";
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
-        // ✅ Use spec from API
+        // ✅ Use spec directly
         const specLabel = run.spec && run.spec !== "all"
           ? run.spec.split("/").pop()
           : "✨ All Tests";

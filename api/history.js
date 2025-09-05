@@ -37,14 +37,19 @@ export default async function handler(req, res) {
           });
           const detail = await detailRes.json();
 
+          // ✅ Try to extract spec in priority order
+          const spec =
+            detail?.inputs?.spec ||                      // from workflow_dispatch inputs
+            run.head_commit?.message?.replace("Triggered ", "") || // from commit message
+            "all";                                       // default
+
           return {
             id: run.id,
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
             message: run.head_commit?.message || null,
-            // 👇 use inputs.spec when available
-            spec: detail?.inputs?.spec || "all"
+            spec
           };
         } catch (err) {
           console.error("Error fetching run details:", err);
@@ -54,7 +59,7 @@ export default async function handler(req, res) {
             conclusion: run.conclusion,
             url: run.html_url,
             message: run.head_commit?.message || null,
-            spec: "all"
+            spec: run.head_commit?.message?.replace("Triggered ", "") || "all"
           };
         }
       })
