@@ -172,7 +172,12 @@
       runButton.disabled = true;
       runButton.innerHTML = `<span class="spinner"></span> Running...`;
 
-      const body = { spec: triggeredSpec };
+      const body = {
+        spec: triggeredSpec,
+        message: triggeredSpec === "all"
+          ? "Triggered full test suite"
+          : `Triggered ${triggeredSpec}`
+      };
 
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/trigger", {
@@ -202,11 +207,13 @@
 
     async function waitForNextRun() {
       if (statusFrozen) return;
+
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
         const runs = data.runs || [];
         const newRun = runs.find(run => !lastKnownRunId || run.id > lastKnownRunId);
+
         if (newRun) {
           currentRunId = newRun.id;
           trackTriggeredRun(newRun);
@@ -222,13 +229,17 @@
     async function trackTriggeredRun(run) {
       if (statusFrozen) return;
       const box = document.getElementById("status-box");
-      const specLabel = !run.spec || run.spec === "all"
-        ? "✨ All Tests"
-        : run.spec.split("/").pop();
+
+      const specLabel = run.name?.includes("–")
+        ? (() => {
+            const rawSpec = run.name.split("–").pop().trim();
+            return rawSpec === "all" ? "✨ All Tests" : rawSpec.split("/").pop();
+          })()
+        : "✨ All Tests";
 
       if (run.status === "queued" || run.status === "in_progress") {
         box.innerHTML = `
-          <p><span class="spinner"></span><b>${specLabel}</b></p>
+          <p><span class="spinner"></span><b>${run.name || "GitHub Workflow"} – ${specLabel}</b></p>
           <p>Run ID: ${run.id}</p>
           <p>Status: ${run.status}</p>
           <p>Conclusion: pending</p>
@@ -238,7 +249,7 @@
       } else {
         const icon = run.conclusion === "success" ? "✅" : "❌";
         box.innerHTML = `
-          <p>${icon} <b>${specLabel}</b></p>
+          <p>${icon} <b>${run.name || "GitHub Workflow"} – ${specLabel}</b></p>
           <p>Run ID: ${run.id}</p>
           <p>Status: ${run.status}</p>
           <p>Conclusion: ${run.conclusion}</p>
@@ -283,9 +294,11 @@
         if (run.conclusion === "failure") cls = "failure";
         if (String(run.id) === String(currentRunId)) cls += " highlight";
 
-        const specLabel = !run.spec || run.spec === "all"
-          ? "✨ All Tests"
-          : run.spec.split("/").pop();
+        let specLabel = "✨ All Tests";
+        if (run.name?.includes("–")) {
+          const rawSpec = run.name.split("–").pop().trim();
+          specLabel = rawSpec === "all" ? "✨ All Tests" : rawSpec.split("/").pop();
+        }
 
         return `
           <tr class="${cls}" data-id="${run.id}">

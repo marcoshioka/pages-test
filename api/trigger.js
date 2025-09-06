@@ -7,8 +7,11 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { spec } = req.body;
+
+  // Force clean values: either "all" or a file path
   const normalizedSpec = !spec || spec === "all" ? "all" : String(spec);
 
+  // 1. Trigger workflow with explicit spec input
   const dispatch = await fetch(
     "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/dispatches",
     {
@@ -20,7 +23,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         ref: "main",
-        inputs: { spec: normalizedSpec }
+        inputs: {
+          spec: normalizedSpec
+        }
       })
     }
   );
@@ -30,8 +35,10 @@ export default async function handler(req, res) {
     return res.status(dispatch.status).json({ error: err });
   }
 
+  // 2. Wait briefly for GitHub to register the run
   await new Promise(r => setTimeout(r, 2000));
 
+  // 3. Get most recent runs
   const runs = await fetch(
     "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=3",
     {
@@ -47,6 +54,7 @@ export default async function handler(req, res) {
     return res.status(runs.status).json({ error: data });
   }
 
+  // 4. Pick newest run
   const run = data.workflow_runs?.sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at)
   )[0];
