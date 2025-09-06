@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // 1. Get last 10 runs
     const ghRes = await fetch(
       "https://api.github.com/repos/marcoshioka/pages-test/actions/workflows/node.js.yml/runs?branch=main&per_page=10",
       {
@@ -25,7 +24,6 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    // 2. Fetch details for each run to get workflow_dispatch inputs
     const runsWithInputs = await Promise.all(
       data.workflow_runs.map(async (run) => {
         try {
@@ -37,16 +35,14 @@ export default async function handler(req, res) {
           });
           const detail = await detailRes.json();
 
-          // Try multiple places where spec might appear
-          let spec = detail?.inputs?.spec || detail?.event?.inputs?.spec || "all";
-
           return {
             id: run.id,
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
-            // ✅ we no longer use commit messages for spec
-            spec
+            message: run.head_commit?.message || null,
+            spec: detail?.inputs?.spec || "all",
+            name: run.name // 👈 include workflow run name here
           };
         } catch (err) {
           console.error("Error fetching run details:", err);
@@ -55,7 +51,9 @@ export default async function handler(req, res) {
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
-            spec: "all"
+            message: run.head_commit?.message || null,
+            spec: "all",
+            name: run.name
           };
         }
       })
