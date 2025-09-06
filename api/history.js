@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    // 2. Fetch details for each run → to get workflow_dispatch inputs
+    // 2. Fetch details for each run to get workflow_dispatch inputs
     const runsWithInputs = await Promise.all(
       data.workflow_runs.map(async (run) => {
         try {
@@ -37,13 +37,16 @@ export default async function handler(req, res) {
           });
           const detail = await detailRes.json();
 
+          // Try multiple places where spec might appear
+          let spec = detail?.inputs?.spec || detail?.event?.inputs?.spec || "all";
+
           return {
             id: run.id,
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
-            // ✅ pull from inputs, fallback only if missing
-            spec: detail?.inputs?.spec || "all"
+            // ✅ we no longer use commit messages for spec
+            spec
           };
         } catch (err) {
           console.error("Error fetching run details:", err);
