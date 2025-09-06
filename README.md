@@ -91,7 +91,10 @@ And then runs:
     fi
 ```
 
-✅ Features
+---
+
+## ✅ Features
+
 Trigger workflows directly from a web page.
 
 Track status of only the triggered run.
@@ -100,12 +103,16 @@ Visualize run history and overall pipeline health.
 
 Run either all tests or a single spec file.
 
-🚧 Future Improvements
+---
+
+## 🚧 Future Improvements
 Show runtime duration in the history table.
 
 Highlight failures with detailed error logs.
 
 Support multiple workflows (UI dropdown to pick workflow).
 
-📜 License
+---
+
+## 📜 License
 This project is licensed under the MIT License — feel free to use, modify, and share.
