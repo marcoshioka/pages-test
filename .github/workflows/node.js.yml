@@ -16,6 +16,9 @@ on:
         required: false
         default: 'all'
 
+# 👇 dynamic run title in GitHub Actions UI
+run-name: Node.js CI – ${{ github.event.inputs.spec || 'all' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,7 +47,7 @@ jobs:
             npx cypress run --spec "${{ github.event.inputs.spec }}"
           fi
 
-      - name: Show message (if provided)
+      - name: Show inputs
         run: |
           echo "Message: ${{ github.event.inputs.message }}"
           echo "Spec: ${{ github.event.inputs.spec }}"
