@@ -83,15 +83,14 @@ on:
         required: true
         default: "all"
 And then runs:
-
-yaml
-Copiar código
 - run: |
     if [ "${{ github.event.inputs.spec }}" = "all" ]; then
       npx cypress run
     else
       npx cypress run --spec "${{ github.event.inputs.spec }}"
     fi
+```
+
 ✅ Features
 Trigger workflows directly from a web page.
 
