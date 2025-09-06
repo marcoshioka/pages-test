@@ -40,9 +40,7 @@ export default async function handler(req, res) {
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
-            message: run.head_commit?.message || null,
-            spec: detail?.inputs?.spec || "all",
-            name: run.name // 👈 include workflow run name here
+            spec: detail?.inputs?.spec || "all"
           };
         } catch (err) {
           console.error("Error fetching run details:", err);
@@ -51,9 +49,7 @@ export default async function handler(req, res) {
             status: run.status,
             conclusion: run.conclusion,
             url: run.html_url,
-            message: run.head_commit?.message || null,
-            spec: "all",
-            name: run.name
+            spec: "all"
           };
         }
       })
