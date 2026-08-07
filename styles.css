@@ -1,0 +1,311 @@
+/* Shared design system for the CI dashboard + reports pages */
+
+:root {
+  --bg: #f5f7fb;
+  --bg-elevated: #ffffff;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --border: #e5e9f0;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --primary-contrast: #ffffff;
+  --success: #16a34a;
+  --success-bg: #ecfdf5;
+  --failure: #dc2626;
+  --failure-bg: #fef2f2;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --muted-bg: #f3f4f6;
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --bg-elevated: #121b2d;
+    --text: #e5e9f0;
+    --text-muted: #97a2b8;
+    --border: #232e46;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-soft: #16233d;
+    --primary-contrast: #ffffff;
+    --success: #22c55e;
+    --success-bg: #10261a;
+    --failure: #f87171;
+    --failure-bg: #2a1616;
+    --warning: #fbbf24;
+    --warning-bg: #2a2210;
+    --muted-bg: #17202f;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  body { padding: var(--space-6) var(--space-5) 48px; }
+}
+
+a { color: var(--primary); }
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Prevent intrinsically-wide children (long <select> options, wide tables)
+   from stretching grid/flex tracks past the viewport on narrow screens. */
+.page > *, .split-row > *, .stats-grid > *, .charts-row > * {
+  min-width: 0;
+}
+
+/* Nav bar */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.navbar .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.navbar nav {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar nav a {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.navbar nav a:hover { color: var(--text); }
+
+.navbar nav a.active {
+  background: var(--primary);
+  color: var(--primary-contrast);
+}
+
+/* Page heading */
+.page-heading { text-align: center; margin: var(--space-2) 0 0; }
+.page-heading h1 { font-size: clamp(1.4rem, 4vw, 1.8rem); margin: 0 0 4px; }
+.page-heading p { color: var(--text-muted); margin: 0; font-size: 0.9rem; }
+
+/* Cards */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 1.05rem;
+}
+
+.card .hint {
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  margin: -4px 0 var(--space-3);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.btn:hover:not([disabled]) { background: var(--primary-hover); }
+.btn:active:not([disabled]) { transform: translateY(1px); }
+.btn[disabled] { background: var(--text-muted); cursor: not-allowed; opacity: 0.7; }
+
+@media (max-width: 520px) {
+  .btn { width: 100%; }
+}
+
+/* Form controls */
+.field-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+}
+
+select, input[type="text"] {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Status box */
+.status-box {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: var(--space-4);
+  font-size: 0.92rem;
+  min-height: 100px;
+}
+.status-box p { margin: 0 0 6px; }
+.status-box p:last-child { margin-bottom: 0; }
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Responsive two-up rows (status/chart, spec-chart/outcome-chart) */
+.split-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+@media (min-width: 760px) {
+  .split-row { grid-template-columns: 1.3fr 1fr; align-items: center; }
+}
+
+.chart-box { position: relative; height: 240px; }
+.chart-box.small { height: 220px; }
+
+/* Stat grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.stat-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.stat-card .value { font-size: 1.6rem; font-weight: 800; color: var(--primary); line-height: 1.2; }
+.stat-card .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+}
+table { width: 100%; min-width: 480px; border-collapse: collapse; background: var(--bg-elevated); }
+th, td { padding: 10px 14px; text-align: left; font-size: 0.87rem; white-space: nowrap; }
+th { background: var(--muted-bg); font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+tbody tr { border-top: 1px solid var(--border); }
+tr.success { background-color: var(--success-bg); }
+tr.failure { background-color: var(--failure-bg); }
+tr.running { background-color: var(--warning-bg); }
+tr.run-row { cursor: pointer; }
+tr.run-row:hover { background-color: var(--primary-soft); }
+tr.highlight { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.empty { color: var(--text-muted); font-size: 0.9rem; padding: var(--space-3) 0; text-align: center; }
+
+/* Test detail expansion (reports.html) */
+.test-detail-row td { background: var(--bg); padding: 0; white-space: normal; }
+.test-detail { padding: var(--space-4) var(--space-5); }
+.test-detail .loading, .test-detail .error { color: var(--text-muted); font-size: 0.85rem; }
+.test-spec-group { margin-bottom: var(--space-3); }
+.test-spec-group h4 { margin: 0 0 6px; font-size: 0.83rem; color: var(--text-muted); font-weight: 700; }
+.test-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  padding: 4px 0;
+  white-space: normal;
+}
+.test-item .icon { flex-shrink: 0; }
+.test-item.failed { color: var(--failure); }
+.test-item.passed { color: var(--success); }
+.test-item.skipped { color: var(--text-muted); }
+.test-item .duration { color: var(--text-muted); font-size: 0.75rem; margin-left: auto; }
+.test-failure-msg {
+  font-size: 0.78rem;
+  color: var(--failure);
+  margin: 2px 0 6px 24px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  white-space: pre-wrap;
+}

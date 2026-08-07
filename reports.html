@@ -5,84 +5,26 @@
   <meta charset="UTF-8" />
   <title>CI Reports</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --bg: #f9fafb;
-      --card-bg: #fff;
-      --text: #111827;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --success: #22c55e;
-      --failure: #ef4444;
-      --warning: #f59e0b;
-      --muted: #6b7280;
-      --radius: 12px;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      margin: 0;
-      padding: 32px;
-      color: var(--text);
-    }
-    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
-    .back-link { display: block; text-align: center; margin-bottom: 24px; }
-    .back-link a { color: var(--primary); text-decoration: none; font-size: 0.9rem; }
-    .container { max-width: 1100px; margin: auto; display: grid; gap: 24px; }
-    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-    }
-    .stat-card {
-      background: var(--card-bg); border-radius: var(--radius); padding: 18px;
-      box-shadow: var(--shadow); text-align: center;
-    }
-    .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
-    .stat-card .label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-    .charts-row { display: flex; gap: 20px; flex-wrap: wrap; }
-    .chart-card { flex: 1; min-width: 320px; }
-    .chart-card canvas { max-height: 280px; }
-    table {
-      width: 100%; border-collapse: collapse; margin-top: 14px;
-      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--card-bg);
-    }
-    th, td { padding: 10px 12px; text-align: left; font-size: 0.9rem; }
-    th { background: #f3f4f6; font-weight: 600; color: #374151; }
-    tr.failure { background-color: #fef2f2; }
-    tr.run-row { cursor: pointer; }
-    tr:hover { background-color: #dbeafe; }
-    .empty { color: var(--muted); font-size: 0.9rem; padding: 12px 0; }
-    .test-detail-row td { background: var(--bg); padding: 0; }
-    .test-detail { padding: 14px 20px; }
-    .test-detail .loading, .test-detail .error { color: var(--muted); font-size: 0.85rem; }
-    .test-spec-group { margin-bottom: 10px; }
-    .test-spec-group h4 { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
-    .test-item {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 0.85rem; padding: 4px 0;
-    }
-    .test-item .icon { flex-shrink: 0; }
-    .test-item.failed { color: var(--failure); }
-    .test-item.passed { color: #15803d; }
-    .test-item.skipped { color: var(--muted); }
-    .test-item .duration { color: var(--muted); font-size: 0.75rem; margin-left: auto; }
-    .test-failure-msg {
-      font-size: 0.78rem; color: var(--failure); margin: 2px 0 6px 24px;
-      font-family: ui-monospace, monospace; white-space: pre-wrap;
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 
 <body>
-  <h1>📊 CI Reports</h1>
-  <div class="back-link"><a href="./index.html">⬅ Back to Dashboard</a></div>
+  <div class="page">
 
-  <div class="container">
+    <div class="navbar">
+      <a class="brand" href="./index.html">🚀 CI Dashboard</a>
+      <nav>
+        <a href="./index.html">Run</a>
+        <a href="./reports.html" class="active">📊 Reports</a>
+      </nav>
+    </div>
+
+    <div class="page-heading">
+      <h1>CI Reports</h1>
+      <p>Aggregate stats and per-test results for recent workflow runs.</p>
+    </div>
 
     <div class="stats-grid">
       <div class="stat-card">
@@ -103,33 +45,39 @@
       </div>
     </div>
 
-    <div class="card charts-row">
-      <div class="chart-card">
-        <h2>Runs by Spec</h2>
-        <canvas id="specChart"></canvas>
-      </div>
-      <div class="chart-card">
-        <h2>Overall Outcome</h2>
-        <canvas id="outcomeChart"></canvas>
+    <div class="card">
+      <div class="split-row">
+        <div>
+          <h2>Runs by Spec</h2>
+          <div class="chart-box small">
+            <canvas id="specChart"></canvas>
+          </div>
+        </div>
+        <div>
+          <h2>Overall Outcome</h2>
+          <div class="chart-box small">
+            <canvas id="outcomeChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <h2>Recent Runs</h2>
-      <p style="color: var(--muted); font-size: 0.85rem; margin-top: -8px;">
-        Click a run to see per-test results. Test details are only available for runs after this feature was added, and expire after 30 days.
-      </p>
-      <table id="runs-table">
-        <thead>
-          <tr>
-            <th>Run ID</th>
-            <th>Spec</th>
-            <th>Conclusion</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <p class="hint">Click a run to see per-test results. Test details are only available for runs after this feature was added, and expire after 30 days.</p>
+      <div class="table-wrap">
+        <table id="runs-table">
+          <thead>
+            <tr>
+              <th>Run ID</th>
+              <th>Spec</th>
+              <th>Conclusion</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
       <div class="empty" id="no-runs" style="display:none;">No runs yet.</div>
     </div>
 
@@ -168,6 +116,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
             x: { stacked: true },
             y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
@@ -189,6 +138,8 @@
           datasets: [{ data: counts, backgroundColor: ["#22c55e", "#ef4444", "#f59e0b", "#6b7280"] }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: { position: "bottom" },
             datalabels: {
