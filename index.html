@@ -5,86 +5,29 @@
   <meta charset="UTF-8" />
   <title>Run CI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --bg: #f9fafb;
-      --card-bg: #fff;
-      --text: #111827;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --success: #22c55e;
-      --failure: #ef4444;
-      --warning: #f59e0b;
-      --muted: #6b7280;
-      --radius: 12px;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      margin: 0;
-      padding: 32px;
-      color: var(--text);
-    }
-    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 24px; color: var(--primary); }
-    .container { max-width: 1100px; margin: auto; display: grid; gap: 24px; }
-    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: 8px;
-      padding: 12px 20px; border-radius: var(--radius);
-      background: var(--primary); color: #fff; border: 0; cursor: pointer; font-weight: 500;
-    }
-    .btn[disabled] { background: var(--muted); cursor: not-allowed; }
-    .status-graph { display: flex; gap: 20px; flex-wrap: wrap; }
-    .status-card { flex: 1; min-width: 260px; }
-    #status-box {
-      border-radius: var(--radius); border: 1px solid #37415133;
-      background: var(--bg); padding: 14px; font-size: 0.95rem; min-height: 120px;
-    }
-    .spinner {
-      display: inline-block; width: 18px; height: 18px;
-      border: 3px solid #e5e7eb; border-top: 3px solid var(--primary);
-      border-radius: 50%; animation: spin 1s linear infinite;
-      vertical-align: middle;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    table {
-      width: 100%; border-collapse: collapse; margin-top: 14px;
-      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--card-bg);
-    }
-    th, td { padding: 10px 12px; text-align: left; font-size: 0.9rem; }
-    th { background: #f3f4f6; font-weight: 600; color: #374151; }
-    tr.success { background-color: #ecfdf5; }
-    tr.failure { background-color: #fef2f2; }
-    tr.running { background-color: #fffbeb; }
-    tr.other   { background-color: #f9fafb; }
-    tr:hover { background-color: #dbeafe; cursor: pointer; }
-    tr.highlight { outline: 2px solid var(--primary); box-shadow: 0 0 6px var(--primary); }
-    .chart-wrapper { flex: 1; min-width: 220px; display: flex; justify-content: center; align-items: center; }
-    .chart-wrapper canvas { max-width: 220px; max-height: 220px; }
-    select {
-      padding: 8px;
-      border-radius: var(--radius);
-      border: 1px solid #ccc;
-      margin-top: 8px;
-      width: 100%;
-      max-width: 400px;
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 
 <body>
-  <h1>🚀 Run GitHub Workflow</h1>
-  <div style="text-align:center; margin-bottom: 8px;">
-    <a href="./reports.html" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">📊 View Reports</a>
-  </div>
-  <div class="container">
+  <div class="page">
+
+    <div class="navbar">
+      <a class="brand" href="./index.html">🚀 CI Dashboard</a>
+      <nav>
+        <a href="./index.html" class="active">Run</a>
+        <a href="./reports.html">📊 Reports</a>
+      </nav>
+    </div>
+
+    <div class="page-heading">
+      <h1>Run GitHub Workflow</h1>
+      <p>Trigger Cypress test runs and watch them complete in real time.</p>
+    </div>
 
     <div class="card">
-      <label for="specSelect"><b>Select what to run:</b></label><br />
+      <label class="field-label" for="specSelect">Select what to run</label>
       <select id="specSelect">
         <option value="all">✨ Run All Tests</option>
 
@@ -118,30 +61,34 @@
       <button id="run" class="btn">▶ Run Workflow</button>
     </div>
 
-    <div class="card status-graph">
-      <div class="status-card">
-        <h2>Triggered Workflow Status</h2>
-        <div id="status-box">No workflow triggered yet.</div>
-      </div>
-      <div class="chart-wrapper">
-        <canvas id="statusChart"></canvas>
+    <div class="card">
+      <div class="split-row">
+        <div>
+          <h2>Triggered Workflow Status</h2>
+          <div id="status-box" class="status-box">No workflow triggered yet.</div>
+        </div>
+        <div class="chart-box">
+          <canvas id="statusChart"></canvas>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <h2>Run History</h2>
-      <table id="history-table">
-        <thead>
-          <tr>
-            <th>Run ID</th>
-            <th>Spec</th>
-            <th>Status</th>
-            <th>Conclusion</th>
-            <th>Link</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th>Run ID</th>
+              <th>Spec</th>
+              <th>Status</th>
+              <th>Conclusion</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -197,11 +144,11 @@
         } else {
           const data = await r.json();
           document.getElementById("status-box").innerHTML =
-            `<p style="color:red;">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
+            `<p style="color:var(--failure);">❌ ${r.status}: ${data.error || "Unknown error"}</p>`;
         }
       } catch (err) {
         document.getElementById("status-box").innerHTML =
-          `<p style="color:red;">⚠️ ${err.message}</p>`;
+          `<p style="color:var(--failure);">⚠️ ${err.message}</p>`;
       } finally {
         runButton.disabled = false;
         runButton.innerHTML = "▶ Run Workflow";
@@ -337,6 +284,8 @@
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: { position: "bottom" },
             tooltip: {
