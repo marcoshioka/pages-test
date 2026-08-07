@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <title>Run CI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+    })();
+  </script>
   <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -15,10 +21,13 @@
 
     <div class="navbar">
       <a class="brand" href="./index.html">🚀 CI Dashboard</a>
-      <nav>
-        <a href="./index.html" class="active">Run</a>
-        <a href="./reports.html">📊 Reports</a>
-      </nav>
+      <div class="navbar-controls">
+        <nav>
+          <a href="./index.html" class="active">Run</a>
+          <a href="./reports.html">📊 Reports</a>
+        </nav>
+        <button type="button" id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+      </div>
     </div>
 
     <div class="page-heading">
@@ -27,36 +36,20 @@
     </div>
 
     <div class="card">
-      <label class="field-label" for="specSelect">Select what to run</label>
-      <select id="specSelect">
-        <option value="all">✨ Run All Tests</option>
-
-        <optgroup label="1-getting-started">
-          <option value="cypress/e2e/1-getting-started/todo.cy.js">todo.cy.js</option>
-        </optgroup>
-
-        <optgroup label="2-advanced-examples">
-          <option value="cypress/e2e/2-advanced-examples/actions.cy.js">actions.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/aliasing.cy.js">aliasing.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/assertions.cy.js">assertions.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/connectors.cy.js">connectors.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/cookies.cy.js">cookies.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/cypress_api.cy.js">cypress_api.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/files.cy.js">files.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/location.cy.js">location.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/misc.cy.js">misc.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/navigation.cy.js">navigation.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/network_requests.cy.js">network_requests.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/querying.cy.js">querying.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/spies_stubs_clocks.cy.js">spies_stubs_clocks.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/storage.cy.js">storage.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/traversal.cy.js">traversal.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/utilities.cy.js">utilities.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/viewport.cy.js">viewport.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/waiting.cy.js">waiting.cy.js</option>
-          <option value="cypress/e2e/2-advanced-examples/window.cy.js">window.cy.js</option>
-        </optgroup>
-      </select>
+      <label class="field-label" for="specSearch">Select what to run</label>
+      <div class="combobox" id="specCombobox">
+        <input
+          type="text"
+          id="specSearch"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="specList"
+          aria-autocomplete="list"
+          autocomplete="off"
+          placeholder="Search spec files…"
+        />
+        <div class="combobox-list" id="specList" role="listbox"></div>
+      </div>
       <br /><br />
       <button id="run" class="btn">▶ Run Workflow</button>
     </div>
@@ -65,10 +58,12 @@
       <div class="split-row">
         <div>
           <h2>Triggered Workflow Status</h2>
-          <div id="status-box" class="status-box">No workflow triggered yet.</div>
+          <div id="status-box" class="status-box" aria-live="polite" aria-atomic="true">No workflow triggered yet.</div>
         </div>
         <div class="chart-box">
-          <canvas id="statusChart"></canvas>
+          <canvas id="statusChart" role="img" aria-label="Pie chart of recent workflow run outcomes">
+            Chart showing the proportion of recent workflow runs by outcome.
+          </canvas>
         </div>
       </div>
     </div>
@@ -86,19 +81,178 @@
               <th>Link</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            <!-- populated by JS; shows skeleton rows until first load completes -->
+          </tbody>
         </table>
       </div>
     </div>
 
   </div>
 
+  <script src="./app.js"></script>
   <script>
+    const SPEC_GROUPS = [
+      {
+        group: "1-getting-started",
+        specs: [
+          { value: "cypress/e2e/1-getting-started/todo.cy.js", label: "todo.cy.js" }
+        ]
+      },
+      {
+        group: "2-advanced-examples",
+        specs: [
+          { value: "cypress/e2e/2-advanced-examples/actions.cy.js", label: "actions.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/aliasing.cy.js", label: "aliasing.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/assertions.cy.js", label: "assertions.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/connectors.cy.js", label: "connectors.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/cookies.cy.js", label: "cookies.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/cypress_api.cy.js", label: "cypress_api.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/files.cy.js", label: "files.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/location.cy.js", label: "location.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/misc.cy.js", label: "misc.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/navigation.cy.js", label: "navigation.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/network_requests.cy.js", label: "network_requests.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/querying.cy.js", label: "querying.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/spies_stubs_clocks.cy.js", label: "spies_stubs_clocks.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/storage.cy.js", label: "storage.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/traversal.cy.js", label: "traversal.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/utilities.cy.js", label: "utilities.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/viewport.cy.js", label: "viewport.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/waiting.cy.js", label: "waiting.cy.js" },
+          { value: "cypress/e2e/2-advanced-examples/window.cy.js", label: "window.cy.js" }
+        ]
+      },
+      {
+        group: "3- tests",
+        specs: [
+          { value: "cypress/e2e/3- tests/test.cy.js", label: "test.cy.js" }
+        ]
+      }
+    ];
+    const ALL_OPTION = { value: "all", label: "✨ Run All Tests" };
+
+    let selectedSpec = ALL_OPTION.value;
+    let selectedLabel = ALL_OPTION.label;
+    let activeIndex = -1;
+
+    const searchInput = document.getElementById("specSearch");
+    const listEl = document.getElementById("specList");
+
+    function flatSpecs() {
+      const flat = [{ ...ALL_OPTION, group: null }];
+      SPEC_GROUPS.forEach(g => g.specs.forEach(s => flat.push({ ...s, group: g.group })));
+      return flat;
+    }
+
+    function matchingSpecs(filter) {
+      const q = filter.trim().toLowerCase();
+      if (!q) return flatSpecs();
+      return flatSpecs().filter(s =>
+        s.label.toLowerCase().includes(q) ||
+        s.value.toLowerCase().includes(q) ||
+        (s.group && s.group.toLowerCase().includes(q))
+      );
+    }
+
+    function renderList(filter) {
+      const items = matchingSpecs(filter);
+      activeIndex = -1;
+
+      if (!items.length) {
+        listEl.innerHTML = `<div class="combobox-empty">No matching spec files</div>`;
+        return;
+      }
+
+      let html = "";
+      let lastGroup;
+      items.forEach((item, i) => {
+        if (item.group !== lastGroup) {
+          html += `<div class="combobox-group-label">${item.group || "Quick actions"}</div>`;
+          lastGroup = item.group;
+        }
+        html += `<div class="combobox-option" data-index="${i}" data-value="${item.value}" role="option">${item.label}</div>`;
+      });
+      listEl.innerHTML = html;
+      listEl._items = items;
+    }
+
+    function openList() {
+      renderList(searchInput.value === selectedLabel ? "" : searchInput.value);
+      listEl.classList.add("open");
+      searchInput.setAttribute("aria-expanded", "true");
+    }
+
+    function closeList() {
+      listEl.classList.remove("open");
+      searchInput.setAttribute("aria-expanded", "false");
+    }
+
+    function selectItem(item) {
+      selectedSpec = item.value;
+      selectedLabel = item.label;
+      searchInput.value = selectedLabel;
+      closeList();
+    }
+
+    function highlightActive() {
+      listEl.querySelectorAll(".combobox-option").forEach(el => {
+        el.classList.toggle("active", Number(el.dataset.index) === activeIndex);
+      });
+      const activeEl = listEl.querySelector(".combobox-option.active");
+      if (activeEl) activeEl.scrollIntoView({ block: "nearest" });
+    }
+
+    searchInput.addEventListener("focus", () => {
+      searchInput.select();
+      openList();
+    });
+
+    searchInput.addEventListener("input", () => openList());
+
+    searchInput.addEventListener("blur", () => {
+      setTimeout(() => {
+        closeList();
+        searchInput.value = selectedLabel;
+      }, 150);
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      const items = listEl._items || [];
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!listEl.classList.contains("open")) return openList();
+        activeIndex = Math.min(activeIndex + 1, items.length - 1);
+        highlightActive();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        highlightActive();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (activeIndex >= 0 && items[activeIndex]) selectItem(items[activeIndex]);
+      } else if (e.key === "Escape") {
+        closeList();
+        searchInput.value = selectedLabel;
+      }
+    });
+
+    listEl.addEventListener("mousedown", (e) => {
+      const opt = e.target.closest(".combobox-option");
+      if (!opt) return;
+      e.preventDefault();
+      const items = listEl._items || [];
+      const item = items[Number(opt.dataset.index)];
+      if (item) selectItem(item);
+    });
+
+    searchInput.value = selectedLabel;
+
     let currentRunId = null;
     let lastKnownRunId = null;
     let chartInstance = null;
     let statusFrozen = false;
-    let triggeredSpec = "all";
+    let historyLoaded = false;
 
     async function captureLastRunId() {
       try {
@@ -116,17 +270,16 @@
       await captureLastRunId();
       statusFrozen = false;
 
-      triggeredSpec = document.getElementById("specSelect").value;
       const runButton = document.getElementById("run");
 
       runButton.disabled = true;
       runButton.innerHTML = `<span class="spinner"></span> Running...`;
 
       const body = {
-        spec: triggeredSpec,
-        message: triggeredSpec === "all"
+        spec: selectedSpec,
+        message: selectedSpec === "all"
           ? "Triggered full test suite"
-          : `Triggered ${triggeredSpec}`
+          : `Triggered ${selectedSpec}`
       };
 
       try {
@@ -137,7 +290,7 @@
         });
 
         if (r.ok) {
-          const label = triggeredSpec === "all" ? "✨ All Tests" : triggeredSpec.split("/").pop();
+          const label = selectedSpec === "all" ? "✨ All Tests" : selectedSpec.split("/").pop();
           document.getElementById("status-box").innerHTML =
             `<p><span class="spinner"></span> Waiting for new run (<b>${label}</b>)...</p>`;
           waitForNextRun();
@@ -223,26 +376,36 @@
     }
 
     async function updateHistoryFromServer() {
+      if (!historyLoaded) {
+        document.querySelector("#history-table tbody").innerHTML = skeletonRows(4, 5);
+      }
       try {
         const r = await fetch("https://pages-test-sooty.vercel.app/api/history");
         const data = await r.json();
         if (r.ok) {
+          historyLoaded = true;
           renderHistory(data.runs);
           updateChart(data.runs);
         }
       } catch (err) {
         console.error("History update failed:", err.message);
+        if (!historyLoaded) {
+          document.querySelector("#history-table tbody").innerHTML =
+            `<tr><td colspan="5"><div class="empty">Couldn't load run history.</div></td></tr>`;
+        }
       }
     }
 
     function renderHistory(runs) {
       const tbody = document.querySelector("#history-table tbody");
+
+      if (!runs.length) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No runs yet.</div></td></tr>`;
+        return;
+      }
+
       tbody.innerHTML = runs.map(run => {
-        let cls = "other";
-        if (run.status === "in_progress" || run.status === "queued") cls = "running";
-        if (run.conclusion === "success") cls = "success";
-        if (run.conclusion === "failure") cls = "failure";
-        if (String(run.id) === String(currentRunId)) cls += " highlight";
+        const cls = String(run.id) === String(currentRunId) ? "highlight" : "";
 
         let specLabel = "✨ All Tests";
         if (run.name?.includes("–")) {
@@ -252,11 +415,11 @@
 
         return `
           <tr class="${cls}" data-id="${run.id}">
-            <td>${run.id}</td>
-            <td>${specLabel}</td>
-            <td>${run.status}</td>
-            <td>${run.conclusion || "pending"}</td>
-            <td><a href="${run.url}" target="_blank">🔗 View</a></td>
+            <td data-label="Run ID">${run.id}</td>
+            <td data-label="Spec">${specLabel}</td>
+            <td data-label="Status">${statusBadge(run.status, null)}</td>
+            <td data-label="Conclusion">${run.conclusion ? statusBadge(null, run.conclusion) : "pending"}</td>
+            <td data-label="Link"><a href="${run.url}" target="_blank">🔗 View</a></td>
           </tr>
         `;
       }).join("");
