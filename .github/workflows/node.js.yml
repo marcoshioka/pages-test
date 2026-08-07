@@ -39,13 +39,23 @@ jobs:
 
       - name: Run Cypress tests
         run: |
+          REPORTER_OPTS="mochaFile=cypress/results/[hash].xml,toConsole=true"
           if [ "${{ github.event.inputs.spec }}" = "all" ]; then
             echo "▶ Running all Cypress tests"
-            npx cypress run
+            npx cypress run --reporter mocha-junit-reporter --reporter-options "$REPORTER_OPTS"
           else
             echo "▶ Running Cypress spec: ${{ github.event.inputs.spec }}"
-            npx cypress run --spec "${{ github.event.inputs.spec }}"
+            npx cypress run --spec "${{ github.event.inputs.spec }}" --reporter mocha-junit-reporter --reporter-options "$REPORTER_OPTS"
           fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-results
+          path: cypress/results/*.xml
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Show inputs
         run: |

@@ -52,8 +52,27 @@
     th, td { padding: 10px 12px; text-align: left; font-size: 0.9rem; }
     th { background: #f3f4f6; font-weight: 600; color: #374151; }
     tr.failure { background-color: #fef2f2; }
+    tr.run-row { cursor: pointer; }
     tr:hover { background-color: #dbeafe; }
     .empty { color: var(--muted); font-size: 0.9rem; padding: 12px 0; }
+    .test-detail-row td { background: var(--bg); padding: 0; }
+    .test-detail { padding: 14px 20px; }
+    .test-detail .loading, .test-detail .error { color: var(--muted); font-size: 0.85rem; }
+    .test-spec-group { margin-bottom: 10px; }
+    .test-spec-group h4 { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    .test-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; padding: 4px 0;
+    }
+    .test-item .icon { flex-shrink: 0; }
+    .test-item.failed { color: var(--failure); }
+    .test-item.passed { color: #15803d; }
+    .test-item.skipped { color: var(--muted); }
+    .test-item .duration { color: var(--muted); font-size: 0.75rem; margin-left: auto; }
+    .test-failure-msg {
+      font-size: 0.78rem; color: var(--failure); margin: 2px 0 6px 24px;
+      font-family: ui-monospace, monospace; white-space: pre-wrap;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -96,19 +115,22 @@
     </div>
 
     <div class="card">
-      <h2>Recent Failures</h2>
-      <table id="failures-table">
+      <h2>Recent Runs</h2>
+      <p style="color: var(--muted); font-size: 0.85rem; margin-top: -8px;">
+        Click a run to see per-test results. Test details are only available for runs after this feature was added, and expire after 30 days.
+      </p>
+      <table id="runs-table">
         <thead>
           <tr>
             <th>Run ID</th>
             <th>Spec</th>
+            <th>Conclusion</th>
             <th>Date</th>
-            <th>Link</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
-      <div class="empty" id="no-failures" style="display:none;">No failures in recent history 🎉</div>
+      <div class="empty" id="no-runs" style="display:none;">No runs yet.</div>
     </div>
 
   </div>
@@ -182,29 +204,99 @@
       });
     }
 
-    function renderFailures(recentFailures) {
-      const tbody = document.querySelector("#failures-table tbody");
-      const emptyEl = document.getElementById("no-failures");
+    const testDetailCache = {};
 
-      if (!recentFailures.length) {
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function renderRuns(trend) {
+      const tbody = document.querySelector("#runs-table tbody");
+      const emptyEl = document.getElementById("no-runs");
+      const recentRuns = trend.slice().reverse().slice(0, 10);
+
+      if (!recentRuns.length) {
         tbody.innerHTML = "";
         emptyEl.style.display = "block";
         return;
       }
 
       emptyEl.style.display = "none";
-      tbody.innerHTML = recentFailures.map(f => {
-        const specLabel = f.spec === "all" ? "✨ All Tests" : f.spec.split("/").pop();
-        const date = f.created_at ? new Date(f.created_at).toLocaleString() : "–";
+      tbody.innerHTML = recentRuns.map(run => {
+        const specLabel = run.spec === "all" ? "✨ All Tests" : run.spec.split("/").pop();
+        const date = run.created_at ? new Date(run.created_at).toLocaleString() : "–";
+        const cls = run.conclusion === "failure" ? "failure" : "";
         return `
-          <tr class="failure">
-            <td>${f.id}</td>
+          <tr class="run-row ${cls}" data-id="${run.id}">
+            <td>${run.id}</td>
             <td>${specLabel}</td>
+            <td>${run.conclusion || run.status}</td>
             <td>${date}</td>
-            <td><a href="${f.url}" target="_blank">🔗 View</a></td>
+          </tr>
+          <tr class="test-detail-row" data-detail-for="${run.id}" style="display:none;">
+            <td colspan="4"><div class="test-detail"></div></td>
           </tr>
         `;
       }).join("");
+
+      document.querySelectorAll("#runs-table tr.run-row").forEach(row => {
+        row.addEventListener("click", () => toggleRunDetail(row.dataset.id));
+      });
+    }
+
+    function renderTestDetail(container, specs) {
+      if (!specs.length) {
+        container.innerHTML = `<div class="error">No test data found in the results for this run.</div>`;
+        return;
+      }
+      container.innerHTML = specs.map(spec => `
+        <div class="test-spec-group">
+          <h4>${escapeHtml(spec.file)} — ${spec.passed}/${spec.total} passed</h4>
+          ${spec.tests.map(t => {
+            const icon = t.status === "passed" ? "✅" : t.status === "failed" ? "❌" : "⏭️";
+            const duration = t.duration !== null ? `${t.duration}s` : "";
+            return `
+              <div class="test-item ${t.status}">
+                <span class="icon">${icon}</span>
+                <span>${escapeHtml(t.name)}</span>
+                <span class="duration">${duration}</span>
+              </div>
+              ${t.failureMessage ? `<div class="test-failure-msg">${escapeHtml(t.failureMessage)}</div>` : ""}
+            `;
+          }).join("")}
+        </div>
+      `).join("");
+    }
+
+    async function toggleRunDetail(runId) {
+      const detailRow = document.querySelector(`tr.test-detail-row[data-detail-for="${runId}"]`);
+      const container = detailRow.querySelector(".test-detail");
+      const isVisible = detailRow.style.display !== "none";
+
+      if (isVisible) {
+        detailRow.style.display = "none";
+        return;
+      }
+
+      detailRow.style.display = "table-row";
+
+      if (testDetailCache[runId]) {
+        renderTestDetail(container, testDetailCache[runId]);
+        return;
+      }
+
+      container.innerHTML = `<div class="loading">Loading test results…</div>`;
+      try {
+        const r = await fetch(`${API_BASE}/api/run/${runId}/tests`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed to load test results");
+        testDetailCache[runId] = data.specs;
+        renderTestDetail(container, data.specs);
+      } catch (err) {
+        container.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message)}</div>`;
+      }
     }
 
     async function loadReport() {
@@ -216,7 +308,7 @@
         renderStats(data);
         renderSpecChart(data.bySpec);
         renderOutcomeChart(data);
-        renderFailures(data.recentFailures);
+        renderRuns(data.trend);
       } catch (err) {
         console.error("Error loading report:", err.message);
       }
