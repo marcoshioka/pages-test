@@ -1,3 +1,5 @@
+import { specFromRunName } from "./spec-from-run-name.js";
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -25,39 +27,23 @@ export default async function handler(req, res) {
     const data = await ghRes.json();
     const runs = data.workflow_runs || [];
 
-    const enriched = await Promise.all(
-      runs.map(async (run) => {
-        let spec = "all";
-        try {
-          const detailRes = await fetch(run.url, {
-            headers: {
-              "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-              "Accept": "application/vnd.github+json"
-            }
-          });
-          const detail = await detailRes.json();
-          spec = detail?.inputs?.spec || "all";
-        } catch (err) {
-          console.error("Error fetching run details:", err);
-        }
+    const enriched = runs.map((run) => {
+      const durationSeconds =
+        run.status === "completed" && run.run_started_at && run.updated_at
+          ? Math.round((new Date(run.updated_at) - new Date(run.run_started_at)) / 1000)
+          : null;
 
-        const durationSeconds =
-          run.status === "completed" && run.run_started_at && run.updated_at
-            ? Math.round((new Date(run.updated_at) - new Date(run.run_started_at)) / 1000)
-            : null;
-
-        return {
-          id: run.id,
-          spec,
-          status: run.status,
-          conclusion: run.conclusion,
-          url: run.html_url,
-          created_at: run.created_at,
-          duration_seconds: durationSeconds,
-          message: run.head_commit?.message || null,
-        };
-      })
-    );
+      return {
+        id: run.id,
+        spec: specFromRunName(run.name),
+        status: run.status,
+        conclusion: run.conclusion,
+        url: run.html_url,
+        created_at: run.created_at,
+        duration_seconds: durationSeconds,
+        message: run.head_commit?.message || null,
+      };
+    });
 
     const total = enriched.length;
     const successCount = enriched.filter(r => r.conclusion === "success").length;

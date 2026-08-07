@@ -1,3 +1,5 @@
+import { specFromRunName } from "./spec-from-run-name.js";
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://marcoshioka.github.io");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -24,40 +26,15 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    const runsWithInputs = await Promise.all(
-      data.workflow_runs.map(async (run) => {
-        try {
-          const detailRes = await fetch(run.url, {
-            headers: {
-              "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-              "Accept": "application/vnd.github+json"
-            }
-          });
-          const detail = await detailRes.json();
-
-          return {
-            id: run.id,
-            status: run.status,
-            conclusion: run.conclusion,
-            url: run.html_url,
-            message: run.head_commit?.message || null,
-            spec: detail?.inputs?.spec || "all",
-            name: run.name // 👈 include workflow run name here
-          };
-        } catch (err) {
-          console.error("Error fetching run details:", err);
-          return {
-            id: run.id,
-            status: run.status,
-            conclusion: run.conclusion,
-            url: run.html_url,
-            message: run.head_commit?.message || null,
-            spec: "all",
-            name: run.name
-          };
-        }
-      })
-    );
+    const runsWithInputs = data.workflow_runs.map((run) => ({
+      id: run.id,
+      status: run.status,
+      conclusion: run.conclusion,
+      url: run.html_url,
+      message: run.head_commit?.message || null,
+      spec: specFromRunName(run.name),
+      name: run.name
+    }));
 
     return res.status(200).json({ runs: runsWithInputs });
   } catch (err) {
