@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <title>CI Reports</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+    })();
+  </script>
   <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -15,10 +21,13 @@
 
     <div class="navbar">
       <a class="brand" href="./index.html">🚀 CI Dashboard</a>
-      <nav>
-        <a href="./index.html">Run</a>
-        <a href="./reports.html" class="active">📊 Reports</a>
-      </nav>
+      <div class="navbar-controls">
+        <nav>
+          <a href="./index.html">Run</a>
+          <a href="./reports.html" class="active">📊 Reports</a>
+        </nav>
+        <button type="button" id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+      </div>
     </div>
 
     <div class="page-heading">
@@ -28,20 +37,30 @@
 
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="value" id="stat-total">–</div>
+        <div class="value skeleton" id="stat-total">&nbsp;</div>
         <div class="label">Total Runs</div>
       </div>
       <div class="stat-card">
-        <div class="value" id="stat-success-rate">–</div>
+        <div class="value skeleton" id="stat-success-rate">&nbsp;</div>
         <div class="label">Success Rate</div>
       </div>
       <div class="stat-card">
-        <div class="value" id="stat-avg-duration">–</div>
+        <div class="value skeleton" id="stat-avg-duration">&nbsp;</div>
         <div class="label">Avg Duration</div>
       </div>
       <div class="stat-card">
-        <div class="value" id="stat-failures">–</div>
+        <div class="value skeleton" id="stat-failures">&nbsp;</div>
         <div class="label">Failures</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pass Rate Trend</h2>
+      <p class="hint">Rolling pass rate over the last 5 completed runs, oldest to newest.</p>
+      <div class="chart-box wide">
+        <canvas id="trendChart" role="img" aria-label="Line chart of rolling pass rate over recent runs">
+          Line chart showing the rolling pass rate percentage across recent workflow runs.
+        </canvas>
       </div>
     </div>
 
@@ -50,13 +69,17 @@
         <div>
           <h2>Runs by Spec</h2>
           <div class="chart-box small">
-            <canvas id="specChart"></canvas>
+            <canvas id="specChart" role="img" aria-label="Bar chart of runs by spec file">
+              Bar chart showing success and failure counts grouped by spec file.
+            </canvas>
           </div>
         </div>
         <div>
           <h2>Overall Outcome</h2>
           <div class="chart-box small">
-            <canvas id="outcomeChart"></canvas>
+            <canvas id="outcomeChart" role="img" aria-label="Pie chart of overall run outcomes">
+              Pie chart showing the proportion of runs by outcome.
+            </canvas>
           </div>
         </div>
       </div>
@@ -83,10 +106,14 @@
 
   </div>
 
+  <script src="./app.js"></script>
   <script>
     const API_BASE = "https://pages-test-sooty.vercel.app";
     let specChartInstance = null;
     let outcomeChartInstance = null;
+    let trendChartInstance = null;
+
+    document.querySelector("#runs-table tbody").innerHTML = skeletonRows(4, 4);
 
     function formatDuration(seconds) {
       if (seconds === null || seconds === undefined) return "–";
@@ -96,10 +123,16 @@
     }
 
     function renderStats(report) {
-      document.getElementById("stat-total").textContent = report.totalRuns;
-      document.getElementById("stat-success-rate").textContent = `${report.successRate}%`;
-      document.getElementById("stat-avg-duration").textContent = formatDuration(report.avgDurationSeconds);
-      document.getElementById("stat-failures").textContent = report.failureCount;
+      const total = document.getElementById("stat-total");
+      const rate = document.getElementById("stat-success-rate");
+      const duration = document.getElementById("stat-avg-duration");
+      const failures = document.getElementById("stat-failures");
+      [total, rate, duration, failures].forEach(el => el.classList.remove("skeleton"));
+
+      total.textContent = report.totalRuns;
+      rate.textContent = `${report.successRate}%`;
+      duration.textContent = formatDuration(report.avgDurationSeconds);
+      failures.textContent = report.failureCount;
     }
 
     function renderSpecChart(bySpec) {
@@ -155,6 +188,61 @@
       });
     }
 
+    function computeRollingPassRate(trend, windowSize) {
+      const relevant = trend.filter(r => r.conclusion === "success" || r.conclusion === "failure");
+      return relevant.map((run, i) => {
+        const start = Math.max(0, i - windowSize + 1);
+        const win = relevant.slice(start, i + 1);
+        const passCount = win.filter(r => r.conclusion === "success").length;
+        return {
+          label: run.created_at
+            ? new Date(run.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+            : `#${run.id}`,
+          rate: Math.round((passCount / win.length) * 100)
+        };
+      });
+    }
+
+    function renderTrendChart(trend) {
+      const points = computeRollingPassRate(trend, 5);
+      const ctx = document.getElementById("trendChart").getContext("2d");
+      if (trendChartInstance) trendChartInstance.destroy();
+
+      if (!points.length) {
+        trendChartInstance = null;
+        return;
+      }
+
+      trendChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: points.map(p => p.label),
+          datasets: [{
+            label: "Pass rate",
+            data: points.map(p => p.rate),
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.15)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `Pass rate: ${ctx.raw}%` } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
     const testDetailCache = {};
 
     function escapeHtml(str) {
@@ -178,13 +266,12 @@
       tbody.innerHTML = recentRuns.map(run => {
         const specLabel = run.spec === "all" ? "✨ All Tests" : run.spec.split("/").pop();
         const date = run.created_at ? new Date(run.created_at).toLocaleString() : "–";
-        const cls = run.conclusion === "failure" ? "failure" : "";
         return `
-          <tr class="run-row ${cls}" data-id="${run.id}">
-            <td>${run.id}</td>
-            <td>${specLabel}</td>
-            <td>${run.conclusion || run.status}</td>
-            <td>${date}</td>
+          <tr class="run-row" data-id="${run.id}">
+            <td data-label="Run ID">${run.id}</td>
+            <td data-label="Spec">${specLabel}</td>
+            <td data-label="Conclusion">${statusBadge(run.status, run.conclusion)}</td>
+            <td data-label="Date">${date}</td>
           </tr>
           <tr class="test-detail-row" data-detail-for="${run.id}" style="display:none;">
             <td colspan="4"><div class="test-detail"></div></td>
@@ -257,11 +344,20 @@
         if (!r.ok) throw new Error(data.error || "Failed to load report");
 
         renderStats(data);
+        renderTrendChart(data.trend);
         renderSpecChart(data.bySpec);
         renderOutcomeChart(data);
         renderRuns(data.trend);
       } catch (err) {
         console.error("Error loading report:", err.message);
+        document.querySelectorAll(".stat-card .value").forEach(el => {
+          el.classList.remove("skeleton");
+          el.textContent = "–";
+        });
+        document.querySelector("#runs-table tbody").innerHTML = "";
+        const emptyEl = document.getElementById("no-runs");
+        emptyEl.textContent = "Couldn't load report data.";
+        emptyEl.style.display = "block";
       }
     }
 
